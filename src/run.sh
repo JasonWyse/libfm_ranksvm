@@ -9,3 +9,4 @@ OHSUMED/OHSUMED/QueryLevelNorm/Fold4/train.txt  -test  ../data/OHSUMED/OHSUMED/Q
 echo 'It is done'
 
 
+
