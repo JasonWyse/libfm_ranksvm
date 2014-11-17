@@ -5,6 +5,7 @@ import ict.edu.learning.multiThread.ThreadCalculateObj_Jfun;
 import ict.edu.learning.multiThread.ThreadUpdateVMatrix;
 import ict.edu.learning.utilities.FileUtils;
 
+import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -637,9 +638,15 @@ public class LogisticRankSVM extends Ranker{
 				normalize(rll_test, features);
 		}	
 		// get all partialPairs sorted by different queries
-		Matrix v = learn(rll_train);		
+		Matrix v = learn(rll_train);
+//		Matrix v= new Matrix();
 		SimpleDateFormat sdf = new SimpleDateFormat("yy-MM-dd-HH-mm");
 		String date = sdf.format(new Date());
+		File file =new File("output/afterLearningMatrixV");
+		if  (!file .exists()  && !file .isDirectory())      
+		{       					      
+		    file .mkdir();    
+		}
 		String filename = "output/afterLearningMatrixV/matrixV"+".txt";
 		FileUtils.write2File(filename, v, filename);
 		Matrix v2 = FileUtils.readFromFileGetMatrix(filename);
@@ -715,6 +722,11 @@ public class LogisticRankSVM extends Ranker{
 				validCount++;		
 				String description = "current learningRate is:" + learningRate + ",after " + validCount + "rounds , the V_new Matrix is:";
 				if (validCount%1==0) {
+					File file =new File("output/inLearningMatrixV");
+					if  (!file .exists()  && !file .isDirectory())      
+					{       					      
+					    file .mkdir();    
+					}
 					FileUtils.write2File("output/inLearningMatrixV/matrixV.txt", V, description);
 					System.out.println("Jfun_pre = "+Jfun_pre);
 					System.out.println("Jfun_new = " + Jfun_new);
