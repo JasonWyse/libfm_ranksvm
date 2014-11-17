@@ -1,6 +1,7 @@
 package ict.edu.learning.utilities;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -18,7 +19,17 @@ public class FileUtils {
 		sb.append("# " + description + System.getProperty("line.separator"));
 		try {  
             // 打开一个写文件器，构造函数中的第二个参数true表示以追加形式写文件  
-            FileWriter writer = new FileWriter(filename, true); 
+			File file=new File(filename);    
+			if(!file.exists())    
+			{    
+			    try {    
+			        file.createNewFile();    
+			    } catch (IOException e) {    
+			        // TODO Auto-generated catch block    
+			        e.printStackTrace();    
+			    }    
+			}    
+			FileWriter writer = new FileWriter(filename, true); 
             for (int i = 0; i < Matrix.RowsOfVMatrix; i++) {
 				for (int j = 0; j < Matrix.ColsOfVMatrix; j++) {
 					sb.append(m.getV()[i][j]).append("\t");
