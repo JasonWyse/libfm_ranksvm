@@ -1,6 +1,12 @@
 if [ ! -d "../bin" ]; then
   mkdir ../bin
 fi
+if [ ! -d "../output/inLearningMatrixV" ]; then
+ mkdir ../output/inLearningMatrixV
+fi
+if [ ! -d "../output/afterLearningMatrixV" ]; then
+ mkdir ../output/afterLearningMatrixV
+fi
 $JAVA_HOME/bin/javac -d ../bin  ict/edu/learning/logisticRankSVM/LogisticRankSVM.java
 echo 'compiling is over'
 nohup $JAVA_HOME/bin/java -cp  ../bin ict/edu/learning/logisticRankSVM/LogisticRankSVM -train ../data/\
