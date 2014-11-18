@@ -66,9 +66,12 @@ public class Test {
 			/*else if(args[i].compareTo("-ranker")==0)
 				rankerType = Integer.parseInt(args[++i]);*/
 		}
-		List<Matrix> ml = FileUtils.readFromFileGetMatrixList(filename);
 		LogisticRankSVM lrs = new LogisticRankSVM();
-		List<RankList> rll_train = lrs.readInput(trainFile);//read input		
+		List<RankList> rll_train = lrs.readInput(trainFile);//read input
+		Matrix.RowsOfVMatrix = RowSize_V(rll_train);
+		List<Matrix> ml = FileUtils.readFromFileGetMatrixList(filename);
+		
+				
 		List<RankList> rll_validation = null;
               if(validationFile.compareTo("")!=0)
 			rll_validation = lrs.readInput(validationFile);
@@ -114,8 +117,15 @@ public class Test {
 				sb.append(i+"\t"+ndcg_1+"\t"+ndcg_2+"\t"+ndcg_3).append(System.getProperty("line.separator"));			
 			}			
 		}
-		FileUtils.write2File("evaluation.txt", sb, "");		
+		FileUtils.write2File("output/afterLearningMatrixV/evaluation.txt", sb, "");		
 	}
+	private static int RowSize_V(List<RankList> rll) {
+		int total = 0;		
+		for (int i = 0; i < rll.size(); i++) {			
+			total += rll.get(i).size();
+		}
+		return total;
+	}	
 	public static List<ArrayList<Double>> getScoreByFun(List<RankList> rll,Matrix matrixV){
 		List<ArrayList<Double>> dll = new ArrayList<ArrayList<Double>>();
 //		List<PartialPairList> ppll = getPartialPairForAllQueries(rll);		
