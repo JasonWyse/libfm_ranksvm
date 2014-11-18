@@ -605,8 +605,8 @@ public class LogisticRankSVM extends Ranker{
 			for (int j = 0; j < ppll.get(i).size(); j++) {
 				PartialPair pp = ppll.get(i).get(j);
 				String qid = pp.getQueryID();
-				String largeDocID = qid + pp.getLargeDocID();
-				String smallDocID = qid + pp.getSmallDocID();
+				String largeDocID = qid + "-" + pp.getLargeDocID();
+				String smallDocID = qid + "- " + pp.getSmallDocID();
 				int v_iq = hp_V.get(largeDocID);
 				int v_jq = hp_V.get(smallDocID);
 				double factor = matrixV.getInnerProduct(v_iq, v_jq);
@@ -638,16 +638,17 @@ public class LogisticRankSVM extends Ranker{
 				normalize(rll_test, features);
 		}	
 		// get all partialPairs sorted by different queries
+		Matrix.setRowsOfVMatrix(rll_train.size());
 		Matrix v = learn(rll_train);
 //		Matrix v= new Matrix();
 		SimpleDateFormat sdf = new SimpleDateFormat("yy-MM-dd-HH-mm");
 		String date = sdf.format(new Date());
-		File file =new File("output/afterLearningMatrixV");
+		File file =new File("output_data/afterLearningMatrixV");
 		if  (!file .exists()  && !file .isDirectory())      
 		{       					      
 		    file .mkdir();    
 		}
-		String filename = "output/afterLearningMatrixV/matrixV"+".txt";
+		String filename = "output_data/afterLearningMatrixV/matrixV"+".txt";
 		FileUtils.write2File(filename, v, filename);
 		Matrix v2 = FileUtils.readFromFileGetMatrix(filename);
 		List<ArrayList<Double>> dll_train = getScoreByFun(rll_train,v2);
@@ -723,12 +724,12 @@ public class LogisticRankSVM extends Ranker{
 				validCount++;		
 				String description = "current learningRate is:" + learningRate + ",after " + validCount + "rounds , the V_new Matrix is:";
 				if (validCount%1==0) {
-					File file =new File("output/inLearningMatrixV");
+					File file =new File("output_data/inLearningMatrixV");
 					if  (!file .exists()  && !file .isDirectory())      
 					{       					      
 					    file .mkdir();    
 					}
-					FileUtils.write2File("output/inLearningMatrixV/matrixV.txt", V, description);
+					FileUtils.write2File("output_data/inLearningMatrixV/matrixV.txt", V, description);
 					System.out.println("Jfun_pre = "+Jfun_pre);
 					System.out.println("Jfun_new = " + Jfun_new);
 					System.out.println("round " + validCount + ", the difference is " + (Jfun_pre-Jfun_new));	
