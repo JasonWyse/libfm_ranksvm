@@ -50,13 +50,24 @@ public class FileUtils {
 		StringBuffer sb = new StringBuffer();
 //		sb.append("# " + description + System.getProperty("line.separator"));
 		try {  
+			File file=new File(filename);    
+			if(!file.exists())    
+			{    
+			    try {    
+			        file.createNewFile();    
+			    } catch (IOException e) {    
+			        // TODO Auto-generated catch block    
+			        e.printStackTrace();    
+			    }    
+			}    
             // 打开一个写文件器，构造函数中的第二个参数true表示以追加形式写文件  
             FileWriter writer = new FileWriter(filename, true); 
             for (int i = 0; i < m.size(); i++) {
 				for (int j = 0; j < m.get(i).size(); j++) {
 					sb.append(m.get(i).get(j)).append(System.getProperty("line.separator"));
 				}				
-			}     
+			}  
+            sb.append(System.getProperty("line.separator"));
             writer.write(sb.toString());  
             writer.close();  
         } catch (IOException e) {  
@@ -70,6 +81,16 @@ public class FileUtils {
 		sb.append("# " + description + System.getProperty("line.separator"));
 		try {  
             // 打开一个写文件器，构造函数中的第二个参数true表示以追加形式写文件  
+			File file=new File(filename);    
+			if(!file.exists())    
+			{    
+			    try {    
+			        file.createNewFile();    
+			    } catch (IOException e) {    
+			        // TODO Auto-generated catch block    
+			        e.printStackTrace();    
+			    }    
+			}    
             FileWriter writer = new FileWriter(filename, true); 
             for (int i = 0; i < Vector.getVectorSize(); i++) {				
 					sb.append(v.getVec()[i]).append("\t");					
@@ -88,6 +109,16 @@ public class FileUtils {
 		
 		try {  
             // 打开一个写文件器，构造函数中的第二个参数true表示以追加形式写文件  
+			File file=new File(filename);    
+			if(!file.exists())    
+			{    
+			    try {    
+			        file.createNewFile();    
+			    } catch (IOException e) {    
+			        // TODO Auto-generated catch block    
+			        e.printStackTrace();    
+			    }    
+			}    
             FileWriter writer = new FileWriter(filename, true); 
             writer.write(sb.toString());  
             writer.close();  
@@ -117,7 +148,7 @@ public class FileUtils {
 		return m;
 	}
 	public static List<Matrix> readFromFileGetMatrixList(String filename) throws IOException{
-		List<Matrix> ml= new ArrayList<Matrix>();
+		List<Matrix> ml= new ArrayList<Matrix>();		
 		Matrix  m = null;
 		FileReader fr = new FileReader(filename);
 		BufferedReader br= new BufferedReader(fr);		 

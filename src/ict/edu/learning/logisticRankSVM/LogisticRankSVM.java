@@ -698,7 +698,7 @@ public class LogisticRankSVM extends Ranker{
 		int validCount = 0;
 		startTime=System.currentTimeMillis();   //start the time	
 		System.out.println(new Date());
-		Jfun_new = parallelCalculateObj_Jfun(ppll, V, nThread);
+//		Jfun_new = parallelCalculateObj_Jfun(ppll, V, nThread);
 		System.out.println(new Date());
 		endTime=System.currentTimeMillis();
 		System.out.println("the time of calculating Jfun_pre in minutes: "+(endTime-startTime)/1000+" s");
@@ -715,7 +715,8 @@ public class LogisticRankSVM extends Ranker{
 	        endTime=System.currentTimeMillis(); //end the time
 	        System.out.println(new Date());
 			System.out.println("the time of updating V with a random PartialPair in minutes: "+(endTime-startTime)/1000/60+" mins");
-			Jfun_new = parallelCalculateObj_Jfun(ppll, V_temp, nThread);
+	//		Jfun_new = parallelCalculateObj_Jfun(ppll, V_temp, nThread);
+			Jfun_new = -1;
 				
 			if(Jfun_new<Jfun_pre){
 				V = V_temp;
