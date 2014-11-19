@@ -1,6 +1,7 @@
 package ict.edu.learning.utilities;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -17,8 +18,18 @@ public class FileUtils {
 		StringBuffer sb = new StringBuffer();
 		sb.append("# " + description + System.getProperty("line.separator"));
 		try {  
-            // 打开一个写文件器，构造函数中的第二个参数true表示以追加形式写文件  
-            FileWriter writer = new FileWriter(filename, true); 
+            // 鎵撳紑涓�釜鍐欐枃浠跺櫒锛屾瀯閫犲嚱鏁颁腑鐨勭浜屼釜鍙傛暟true琛ㄧず浠ヨ拷鍔犲舰寮忓啓鏂囦欢  
+			File file=new File(filename);    
+			if(!file.exists())    
+			{    
+			    try {    
+			        file.createNewFile();    
+			    } catch (IOException e) {    
+			        // TODO Auto-generated catch block    
+			        e.printStackTrace();    
+			    }    
+			}    
+			FileWriter writer = new FileWriter(filename, true); 
             for (int i = 0; i < Matrix.RowsOfVMatrix; i++) {
 				for (int j = 0; j < Matrix.ColsOfVMatrix; j++) {
 					sb.append(m.getV()[i][j]).append("\t");
@@ -39,13 +50,24 @@ public class FileUtils {
 		StringBuffer sb = new StringBuffer();
 //		sb.append("# " + description + System.getProperty("line.separator"));
 		try {  
-            // 打开一个写文件器，构造函数中的第二个参数true表示以追加形式写文件  
-            FileWriter writer = new FileWriter(filename, true); 
+			File file=new File(filename);    
+			if(!file.exists())    
+			{    
+			    try {    
+			        file.createNewFile();    
+			    } catch (IOException e) {    
+			        // TODO Auto-generated catch block    
+			        e.printStackTrace();    
+			    }    
+			}    
+            // 鎵撳紑涓�釜鍐欐枃浠跺櫒锛屾瀯閫犲嚱鏁颁腑鐨勭浜屼釜鍙傛暟true琛ㄧず浠ヨ拷鍔犲舰寮忓啓鏂囦欢  
+            FileWriter writer = new FileWriter(filename, false); 
             for (int i = 0; i < m.size(); i++) {
 				for (int j = 0; j < m.get(i).size(); j++) {
 					sb.append(m.get(i).get(j)).append(System.getProperty("line.separator"));
 				}				
-			}     
+			}  
+            sb.append(System.getProperty("line.separator"));
             writer.write(sb.toString());  
             writer.close();  
         } catch (IOException e) {  
@@ -58,7 +80,17 @@ public class FileUtils {
 		StringBuffer sb = new StringBuffer();
 		sb.append("# " + description + System.getProperty("line.separator"));
 		try {  
-            // 打开一个写文件器，构造函数中的第二个参数true表示以追加形式写文件  
+            // 鎵撳紑涓�釜鍐欐枃浠跺櫒锛屾瀯閫犲嚱鏁颁腑鐨勭浜屼釜鍙傛暟true琛ㄧず浠ヨ拷鍔犲舰寮忓啓鏂囦欢  
+			File file=new File(filename);    
+			if(!file.exists())    
+			{    
+			    try {    
+			        file.createNewFile();    
+			    } catch (IOException e) {    
+			        // TODO Auto-generated catch block    
+			        e.printStackTrace();    
+			    }    
+			}    
             FileWriter writer = new FileWriter(filename, true); 
             for (int i = 0; i < Vector.getVectorSize(); i++) {				
 					sb.append(v.getVec()[i]).append("\t");					
@@ -76,7 +108,17 @@ public class FileUtils {
 		//BufferedWriter out = null;
 		
 		try {  
-            // 打开一个写文件器，构造函数中的第二个参数true表示以追加形式写文件  
+            // 鎵撳紑涓�釜鍐欐枃浠跺櫒锛屾瀯閫犲嚱鏁颁腑鐨勭浜屼釜鍙傛暟true琛ㄧず浠ヨ拷鍔犲舰寮忓啓鏂囦欢  
+			File file=new File(filename);    
+			if(!file.exists())    
+			{    
+			    try {    
+			        file.createNewFile();    
+			    } catch (IOException e) {    
+			        // TODO Auto-generated catch block    
+			        e.printStackTrace();    
+			    }    
+			}    
             FileWriter writer = new FileWriter(filename, true); 
             writer.write(sb.toString());  
             writer.close();  
@@ -92,21 +134,22 @@ public class FileUtils {
 		String lineContent;
 		int matrixRow_index = 0;
 		 while((lineContent = br.readLine()) != null) {
-			 if (lineContent.equals("")||lineContent.contains("#")) {
+			 if (lineContent.contains("#")) {
 				continue;
+			 }
+			 if(lineContent.equals("")){
+				 break;
 			 }
 			 String [] str = lineContent.split("\t");
 			 for (int i = 0; i < str.length; i++) {				
 				m.getV()[matrixRow_index][i] = Double.parseDouble(str[i]);
-			 }
-			 if(matrixRow_index>=99)
-				 System.out.println(matrixRow_index);
+			 }			 
 			 matrixRow_index++;
 		  }
 		return m;
 	}
 	public static List<Matrix> readFromFileGetMatrixList(String filename) throws IOException{
-		List<Matrix> ml= new ArrayList<Matrix>();
+		List<Matrix> ml= new ArrayList<Matrix>();		
 		Matrix  m = null;
 		FileReader fr = new FileReader(filename);
 		BufferedReader br= new BufferedReader(fr);		 
