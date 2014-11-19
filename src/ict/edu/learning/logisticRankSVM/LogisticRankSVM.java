@@ -54,6 +54,7 @@ public class LogisticRankSVM extends Ranker{
 	public static int learningRateAttenuationTime = 5;
 	public static int NDCG_para = 10;
 	public static HashMap<String, Integer> hp_V = null;
+	static String fold_n = null;
 	public static void main(String[] args) throws InterruptedException, Exception {
 		// TODO Auto-generated method stub
 		String[] rType = new String[]{"MART", "RankNet", "RankBoost", "AdaRank", "Coordinate Ascent", "LambdaRank", "LambdaMART", "ListNet", "Random Forests","Logistic RanKSVM"};
@@ -583,15 +584,15 @@ public class LogisticRankSVM extends Ranker{
 		return ppll.get(query_index).get(pp_query_index);		
 		
 	}
-	public List<ArrayList<Double>> getScoreByFun(List<RankList> rll,Matrix matrixV){
+	public List<ArrayList<Double>> getScoreByFun(List<RankList> rll,Vector w){
 		List<ArrayList<Double>> dll = new ArrayList<ArrayList<Double>>();
 //		List<PartialPairList> ppll = getPartialPairForAllQueries(rll);		
-		Vector w = getW(rll, matrixV);
+	//	Vector w = getW(rll, matrixV);
 		for (int i = 0; i < rll.size(); i++) {
 			ArrayList<Double> dl = new ArrayList<Double>();
 			for (int j = 0; j < rll.get(i).size(); j++) {
 				Vector x_ij = new Vector(rll.get(i).get(j).getFeatureVector());
-				double scoreByFun = Vector.dotProduct(w, x_ij);
+				double scoreByFun = Vector.dotProduct(w, x_ij)-w.getVec()[0]*x_ij.getVec()[0];
 				dl.add(scoreByFun);
 			}
 			dll.add(dl);
@@ -600,21 +601,36 @@ public class LogisticRankSVM extends Ranker{
 	}
 	public Vector getW(List<RankList> rll, Matrix matrixV){
 		List<PartialPairList> ppll = getPartialPairForAllQueries(rll);		
-		Vector w = new Vector(Matrix.getColsOfVMatrix());
+		Vector w = new Vector(DataPoint.featureCount+1);//feature 0 is reserved for use,so we extend the dimension.
 		for (int i = 0; i < ppll.size(); i++) {
 			for (int j = 0; j < ppll.get(i).size(); j++) {
 				PartialPair pp = ppll.get(i).get(j);
 				String qid = pp.getQueryID();
-				String largeDocID = qid + pp.getLargeDocID();
-				String smallDocID = qid + pp.getSmallDocID();
+				String largeDocID = qid + "-" + pp.getLargeDocID();
+				String smallDocID = qid + "-" + pp.getSmallDocID();
 				int v_iq = hp_V.get(largeDocID);
-				int v_jq = hp_V.get(smallDocID);
+				int v_jq = hp_V.get(smallDocID); 
 				double factor = matrixV.getInnerProduct(v_iq, v_jq);
-				double [] temp = Matrix.multiplyRowVector(factor, pp.getPartialFVals());
-				w = Vector.addition(w, new Vector(temp));
+				double [] temp = Matrix.multiplyRowVector(factor, pp.getPartialFVals()); 
+				w = Vector.addition(w, new Vector(temp)); 
 			}
 		}
 		return w;
+	}
+	public String makeDir(String tail) {  
+	    String[] sub = tail.split("/");  
+	    File dir = new File(".");  
+	    for (int i = 0; i < sub.length; i++) {  
+	        if (!dir.exists()) {  
+	            dir.mkdir();  
+	        }  
+	        File dir2 = new File(dir + File.separator + sub[i]);  
+	        if (!dir2.exists()) {  
+	            dir2.mkdir();  
+	        }  
+	        dir = dir2;  
+	    }  
+	    return dir.toString();  
 	}
 	public void evaluate(String trainFile, String validationFile, String testFile, String featureDefFile) throws InterruptedException, Exception
 	{
@@ -638,21 +654,26 @@ public class LogisticRankSVM extends Ranker{
 				normalize(rll_test, features);
 		}	
 		// get all partialPairs sorted by different queries
+		fold_n = (String) trainFile.subSequence(trainFile.indexOf("Fold"), trainFile.indexOf("Fold")+5);
+		
+		Matrix.setRowsOfVMatrix(rll_train.size());
 		Matrix v = learn(rll_train);
 //		Matrix v= new Matrix();
 		SimpleDateFormat sdf = new SimpleDateFormat("yy-MM-dd-HH-mm");
 		String date = sdf.format(new Date());
-		File file =new File("../output/afterLearningMatrixV");
-		if  (!file .exists()  && !file .isDirectory())      
-		{       					      
-		    file .mkdir();    
-		}
-		String filename = "../output/afterLearningMatrixV/matrixV"+".txt";
+		String dir = "output_data/factorizedLR/final_matrixV/" + fold_n;
+		makeDir(dir);		
+		String filename = dir + "/matrixV.txt";
 		FileUtils.write2File(filename, v, filename);
 		Matrix v2 = FileUtils.readFromFileGetMatrix(filename);
-		List<ArrayList<Double>> dll_train = getScoreByFun(rll_train,v2);
-		List<ArrayList<Double>> dll_vali = getScoreByFun(rll_validation,v2);
-		List<ArrayList<Double>> dll_test = getScoreByFun(rll_test,v2);
+		Vector w = getW(rll_train,v2);
+		dir = "output_data/factorizedLR/final_w/" + fold_n;
+		makeDir(dir);
+		filename = dir + "/w.txt";
+		FileUtils.write2File(filename, w, filename);
+		List<ArrayList<Double>> dll_train = getScoreByFun(rll_train,w);
+		List<ArrayList<Double>> dll_vali = getScoreByFun(rll_validation,w);
+		List<ArrayList<Double>> dll_test = getScoreByFun(rll_test,w);
 		double map1 = Measurement.MAP(dll_train, rll_train);
 		double map2 = Measurement.MAP(dll_vali, rll_validation);
 		double map3 = Measurement.MAP(dll_test, rll_test);
@@ -663,7 +684,7 @@ public class LogisticRankSVM extends Ranker{
 		sb.append("NDCG").append(System.getProperty("line.separator"));
 		sb.append("\t train"+"\t validation" +"\t test").append(System.getProperty("line.separator"));
 		System.out.println("map for train:vili:test:" + map1 + ":" + map2 +":" + map3);
-		for (int i = 0; i < NDCG_para; i++) {
+		for (int i = 1; i <= NDCG_para; i++) {
 			double ndcg_1 = Measurement.NDCG(dll_train, rll_train,i);
 			double ndcg_2 = Measurement.NDCG(dll_vali, rll_validation,i);
 			double ndcg_3 = Measurement.NDCG(dll_test, rll_test,i);
@@ -698,15 +719,20 @@ public class LogisticRankSVM extends Ranker{
 		int validCount = 0;
 		startTime=System.currentTimeMillis();   //start the time	
 		System.out.println(new Date());
-//		Jfun_new = parallelCalculateObj_Jfun(ppll, V, nThread);
+		Jfun_new = parallelCalculateObj_Jfun(ppll, V, nThread);
 		System.out.println(new Date());
 		endTime=System.currentTimeMillis();
 		System.out.println("the time of calculating Jfun_pre in minutes: "+(endTime-startTime)/1000+" s");
 		PartialPair pp = null;
+		boolean isAmplifyLearningRate = false;
 		do{
-	//		V_pre = V_new;	
+		
 			Jfun_pre = Jfun_new;
 			startTime=System.currentTimeMillis();   //start the time	
+			if(isAmplifyLearningRate){
+				this.learningRate *= 1.05;
+				isAmplifyLearningRate = false;
+			}
 			System.out.println(new Date());
 			do{
 				pp = getPP_RandomQuery(ppll);
@@ -715,23 +741,21 @@ public class LogisticRankSVM extends Ranker{
 	        endTime=System.currentTimeMillis(); //end the time
 	        System.out.println(new Date());
 			System.out.println("the time of updating V with a random PartialPair in minutes: "+(endTime-startTime)/1000/60+" mins");
-	//		Jfun_new = parallelCalculateObj_Jfun(ppll, V_temp, nThread);
-			Jfun_new = -1;
+			Jfun_new = parallelCalculateObj_Jfun(ppll, V_temp, nThread);
+	//		Jfun_new = -1;
 				
 			if(Jfun_new<Jfun_pre){
 				V = V_temp;
 				validCount++;		
 				String description = "current learningRate is:" + learningRate + ",after " + validCount + "rounds , the V_new Matrix is:";
-				if (validCount%1==0) {
-					File file =new File("../output/inLearningMatrixV");
-					if  (!file .exists()  && !file .isDirectory())      
-					{       					      
-					    file .mkdir();    
-					}
-					FileUtils.write2File("../output/inLearningMatrixV/matrixV.txt", V, description);
+				if (validCount%3==0) {
+					String dir = "output_data/factorizedLR/inLearning_matrixV/" + fold_n;
+					makeDir(dir);	
+					FileUtils.write2File(dir + "/matrixV.txt", V, description);
 					System.out.println("Jfun_pre = "+Jfun_pre);
 					System.out.println("Jfun_new = " + Jfun_new);
 					System.out.println("round " + validCount + ", the difference is " + (Jfun_pre-Jfun_new));	
+					isAmplifyLearningRate = true;
 				}		
 			}
 			else{

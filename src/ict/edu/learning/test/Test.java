@@ -4,6 +4,7 @@ import ict.edu.learning.logisticRankSVM.LogisticRankSVM;
 import ict.edu.learning.measure.Measurement;
 import ict.edu.learning.utilities.FileUtils;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -65,7 +66,7 @@ public class Test {
 			}	
 			/*else if(args[i].compareTo("-ranker")==0)
 				rankerType = Integer.parseInt(args[++i]);*/
-		}
+		}		
 		LogisticRankSVM lrs = new LogisticRankSVM();
 		List<RankList> rll_train = lrs.readInput(trainFile);//read input
 		Matrix.RowsOfVMatrix = RowSize_V(rll_train);
@@ -89,17 +90,24 @@ public class Test {
 		}
 		StringBuffer sb = new StringBuffer();
 		Matrix V =ml.get(ml.size()-1);//选择最新训练出来的matrix
-		List<ArrayList<Double>> dll_train1 = getScoreByFun(rll_train,V);
-		FileUtils.write2File("output/prediction_train.txt", dll_train1, "");
-		List<ArrayList<Double>> dll_vali1 = getScoreByFun(rll_validation,V);
-		FileUtils.write2File("output/prediction_validation.txt", dll_vali1, "");
-		List<ArrayList<Double>> dll_test1 = getScoreByFun(rll_test,V);
-		FileUtils.write2File("output/prediction_test.txt", dll_test1, "");
+		Vector w = getW(rll_train, V);
+		File file =new File("output_data/prediction");
+		if  (!file .exists()  && !file .isDirectory())      
+		{       					      
+		    file .mkdir();    
+		}
+		List<ArrayList<Double>> dll_train1 = getScoreByFun(rll_train,w);
+		FileUtils.write2File("output_data/prediction/prediction_train.txt", dll_train1, "");
+		List<ArrayList<Double>> dll_vali1 = getScoreByFun(rll_validation,w);
+		FileUtils.write2File("output_data/prediction/prediction_validation.txt", dll_vali1, "");
+		List<ArrayList<Double>> dll_test1 = getScoreByFun(rll_test,w);
+		FileUtils.write2File("output_data/prediction/prediction_test.txt", dll_test1, "");
 		for (int j = 0; j < ml.size(); j++) {
 			sb.append("--------------for matrix "+j+"--------------").append(System.getProperty("line.separator"));
-			List<ArrayList<Double>> dll_train = getScoreByFun(rll_train,ml.get(j));
-			List<ArrayList<Double>> dll_vali = getScoreByFun(rll_validation,ml.get(j));
-			List<ArrayList<Double>> dll_test = getScoreByFun(rll_test,ml.get(j));
+			Vector w_ite = getW(rll_train, ml.get(j));
+			List<ArrayList<Double>> dll_train = getScoreByFun(rll_train,w_ite);
+			List<ArrayList<Double>> dll_vali = getScoreByFun(rll_validation,w_ite);
+			List<ArrayList<Double>> dll_test = getScoreByFun(rll_test,w_ite);
 			double map1 = Measurement.MAP(dll_train, rll_train);
 			double map2 = Measurement.MAP(dll_vali, rll_validation);
 			double map3 = Measurement.MAP(dll_test, rll_test);
@@ -117,7 +125,8 @@ public class Test {
 				sb.append(i+"\t"+ndcg_1+"\t"+ndcg_2+"\t"+ndcg_3).append(System.getProperty("line.separator"));			
 			}			
 		}
-		FileUtils.write2File("output/afterLearningMatrixV/evaluation.txt", sb, "");		
+		FileUtils.write2File("output_data/afterLearningMatrixV/evaluation.txt", sb, "");
+		System.out.println("test.main() is over");
 	}
 	private static int RowSize_V(List<RankList> rll) {
 		int total = 0;		
@@ -126,10 +135,10 @@ public class Test {
 		}
 		return total;
 	}	
-	public static List<ArrayList<Double>> getScoreByFun(List<RankList> rll,Matrix matrixV){
+	public static List<ArrayList<Double>> getScoreByFun(List<RankList> rll,Vector w){
 		List<ArrayList<Double>> dll = new ArrayList<ArrayList<Double>>();
 //		List<PartialPairList> ppll = getPartialPairForAllQueries(rll);		
-		Vector w = getW(rll, matrixV);
+	//	Vector w = getW(rll, matrixV);
 		for (int i = 0; i < rll.size(); i++) {
 			ArrayList<Double> dl = new ArrayList<Double>();
 			for (int j = 0; j < rll.get(i).size(); j++) {
