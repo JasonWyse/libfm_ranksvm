@@ -109,8 +109,8 @@ public class Matrix {
 		return result;
 	}
 	public  static double[]  multiplyRowVector( double factor1, double[] v){
-		double[] result = new double[Matrix.ColsOfVMatrix];
-		for (int i = 0; i < Matrix.ColsOfVMatrix; i++) {
+		double[] result = new double[v.length];
+		for (int i = 0; i < v.length; i++) {
 			result[i] = (double) (v[i] * factor1);
 		}
 		return result;
@@ -123,7 +123,7 @@ public class Matrix {
 	}
 	public double getInnerProduct(int V_iq,  int V_jq){
 		double innerProduct = 0;
-		for (int i = 1; i < Matrix.ColsOfVMatrix; i++) {
+		for (int i = 0; i < Matrix.ColsOfVMatrix; i++) {
 			innerProduct += this.V[V_iq][i]*this.V[V_jq][i];
 		}
 		return innerProduct;
