@@ -26,7 +26,7 @@ public class Measurement {
 				double relevance =0;				
 				for (int k = 0; k <=j; k++) {//iterate all the document k before document j
 					int index = docs_des_byScore[k];					
-					if (rll.get(i).get(index).getLabel() > 0) {
+					if (rll.get(i).get(index).getLabel() > 1) {
 						relevance ++;
 					}					
 				}				

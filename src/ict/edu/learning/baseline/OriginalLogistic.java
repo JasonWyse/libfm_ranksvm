@@ -1,12 +1,21 @@
 package ict.edu.learning.baseline;
 
 import ict.edu.learning.measure.Measurement;
+import ict.edu.learning.multiThread.ThreadCalculateLRObj_Jfun;
+import ict.edu.learning.multiThread.ThreadCalculateLR_Gradient;
+import ict.edu.learning.multiThread.ThreadUpdateVMatrix;
 import ict.edu.learning.utilities.FileUtils;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import ciir.umass.edu.features.FeatureManager;
 import ciir.umass.edu.features.Normalizer;
@@ -21,7 +30,7 @@ import ciir.umass.edu.metric.ERRScorer;
 
 public class OriginalLogistic {
 public static int w_length = 5;
-public static double learningRate = 0.0001;
+public static double learningRate = 0.001;
 public static boolean letor = false;
 public static boolean mustHaveRelDoc = false;
 public static boolean normalize = false;
@@ -32,8 +41,10 @@ public static int ColsOfVMatrix = 5;
 public static int ROW_INCREASE = 20;
 public static int V_size = 0;
 public static double epsilon = 0.00000000001f;
-public static int nThread = 1;
-public static int maxIterations=5;
+public static int nThread = 5;
+public static int maxIterations=1000;
+public static int learningRateAttenuationTime = 5;
+String fold_n = null;
 public static HashMap<String, Integer> hp_V = null;
 	public OriginalLogistic() {
 		// TODO Auto-generated constructor stub
@@ -79,8 +90,12 @@ public static HashMap<String, Integer> hp_V = null;
 				testMetric = args[++i];
 			else if(args[i].compareTo("-nThread")==0)
 				nThread = Integer.parseInt(args[++i]);
+			else if(args[i].compareTo("-epsilon")==0)
+				epsilon = Double.parseDouble(args[++i]);			
 			else if(args[i].compareTo("-maxIterations")==0)
-				nThread = Integer.parseInt(args[++i]);
+				maxIterations = Integer.parseInt(args[++i]);
+			else if(args[i].compareTo("-learningRateAttenuationTime")==0)
+				learningRateAttenuationTime = Integer.parseInt(args[++i]);
 			else if(args[i].compareTo("-learningRate")==0)
 				learningRate = Double.parseDouble(args[++i]);
 			else if(args[i].compareTo("-gmax")==0)
@@ -208,7 +223,7 @@ public static HashMap<String, Integer> hp_V = null;
 			ArrayList<Double> dl = new ArrayList<Double>();
 			for (int j = 0; j <rll.get(i).size() ; j++) {
 				Vector v = new Vector(rll.get(i).get(j).getFeatureVector());
-				double scoreByFun = Vector.dotProduct(w, v);
+				double scoreByFun = (Vector.dotProduct(w, v)-w.getVec()[0]*v.getVec()[0]);				
 				dl.add(scoreByFun);
 			}
 			dll.add(dl);
@@ -240,6 +255,26 @@ public static HashMap<String, Integer> hp_V = null;
 		}
 		return total;
 	}
+	public double Obj_Jfun_parallelOriginalLogistic(List<PartialPairList> ppll, Vector w) throws InterruptedException{
+		double total = 0;	
+		ExecutorService es = Executors.newFixedThreadPool(nThread);
+		List<Future<Double>> resultList = new ArrayList<Future<Double>>();		
+		for (int i = 0; i < ppll.size(); i++) {//iterate all the queries						
+			Future<Double> fu = es.submit(new ThreadCalculateLRObj_Jfun(ppll, i , w));	
+			resultList.add(fu);
+		}		
+		es.shutdown();		 
+		while (!es.awaitTermination(10, TimeUnit.SECONDS));		
+		for (int i = 0; i < resultList.size(); i++) {
+			try {
+				total += resultList.get(i).get(); 
+			} catch (ExecutionException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		return total;
+	}
 	public Vector derivate_w(List<PartialPairList> ppll, Vector w){
 		Vector gradient = new Vector();
 		for (int i = 0; i < ppll.size(); i++) {
@@ -253,10 +288,46 @@ public static HashMap<String, Integer> hp_V = null;
 		}
 		return gradient;		
 	}
+	public Vector derivate_w_parallel(List<PartialPairList> ppll, Vector w) throws InterruptedException{
+		Vector gradient = new Vector();
+		ExecutorService es = Executors.newFixedThreadPool(nThread);
+		List<Future<Vector>> resultList = new ArrayList<Future<Vector>>();
+		for (int i = 0; i < ppll.size(); i++) {
+			
+			Future<Vector> fu = es.submit(new ThreadCalculateLR_Gradient(ppll, i , w));	
+			resultList.add(fu);			
+		}
+		es.shutdown();		 
+		while (!es.awaitTermination(10, TimeUnit.SECONDS));		
+		for (int i = 0; i < resultList.size(); i++) {
+			try {
+				gradient = Vector.addition(gradient, resultList.get(i).get());//gradient += resultList.get(i).get(); 
+			} catch (ExecutionException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		return gradient;		
+	}
 	public void normalize(List<RankList> samples, int[] fids)
 	{
 		for(int i=0;i<samples.size();i++)
 			nml.normalize(samples.get(i), fids);
+	}
+	public String makeDir(String tail) {  
+	    String[] sub = tail.split("/");  
+	    File dir = new File(".");  
+	    for (int i = 0; i < sub.length; i++) {  
+	        if (!dir.exists()) {  
+	            dir.mkdir();  
+	        }  
+	        File dir2 = new File(dir + File.separator + sub[i]);  
+	        if (!dir2.exists()) {  
+	            dir2.mkdir();  
+	        }  
+	        dir = dir2;  
+	    }  
+	    return dir.toString();  
 	}
 	public void evaluate(String trainFile, String validationFile, String testFile, String featureDefFile) throws InterruptedException, Exception
 	{
@@ -270,7 +341,7 @@ public static HashMap<String, Integer> hp_V = null;
 		int[] features = readFeature(featureDefFile);//read features
 		if(features == null)//no features specified ==> use all features in the training file
 			features = getFeatureFromSampleVector(train);
-		Vector.setVectorSize(features.length);
+		Vector.setVectorSize(features.length+1);
 		if(normalize)
 		{
 			normalize(train, features);
@@ -280,16 +351,47 @@ public static HashMap<String, Integer> hp_V = null;
 				normalize(test, features);
 		}	
 		// get all partialPairs sorted by different queries
-		Vector w = learn(train);	
-		List<ArrayList<Double>> dll = getScoreByFun(test,w);
-		double map= Measurement.MAP(dll, test);
-		double ndcg = Measurement.NDCG(dll, test, 7);
-		System.out.println(map);
-		System.out.println(ndcg);
+		fold_n = (String) trainFile.subSequence(trainFile.indexOf("Fold"), trainFile.indexOf("Fold")+5);
+		Vector w = learn(train);					
+		String dir = "output_data/originalLR/final_w/"+fold_n;
+		makeDir(dir);
+		File file = new File(dir);
+		if  (!file .exists()  && !file .isDirectory())      
+		{       					      
+		    file .mkdir();    
+		}
+		String filename = dir + "/w.txt";
+		FileUtils.write2File(filename, w, fold_n);
+		List<ArrayList<Double>> dll_train = getScoreByFun(train,w);
+		List<ArrayList<Double>> dll_vali = getScoreByFun(validation,w);
+		List<ArrayList<Double>> dll_test = getScoreByFun(test,w);
+		filename = dir + "/train_prediction.txt";
+		FileUtils.write2File(filename, dll_train, fold_n);
+		filename = dir + "/vali_prediction.txt";
+		FileUtils.write2File(filename, dll_vali, fold_n);
+		filename = dir + "/test_prediction.txt";
+		FileUtils.write2File(filename, dll_test, fold_n);
+		double map1 = Measurement.MAP(dll_train, train);
+		double map2 = Measurement.MAP(dll_vali, validation);
+		double map3 = Measurement.MAP(dll_test, test);
+		StringBuffer sb = new StringBuffer();
+		sb.append("MAP").append(System.getProperty("line.separator"));
+		sb.append("\t train"+"\t validation" +"\t test").append(System.getProperty("line.separator"));
+		sb.append("\t" + map1 + "\t" + map2 +"\t" + map3).append(System.getProperty("line.separator"));
+		sb.append("NDCG").append(System.getProperty("line.separator"));
+		sb.append("\t train"+"\t validation" +"\t test").append(System.getProperty("line.separator"));
+		System.out.println("map for train:vili:test:" + map1 + ":" + map2 +":" + map3);
+		for (int i = 1; i <= 10; i++) {
+			double ndcg_1 = Measurement.NDCG(dll_train, train,i);
+			double ndcg_2 = Measurement.NDCG(dll_vali, validation,i);
+			double ndcg_3 = Measurement.NDCG(dll_test, test,i);
+			sb.append(i+"\t"+ndcg_1+"\t"+ndcg_2+"\t"+ndcg_3).append(System.getProperty("line.separator"));			
+		}
+		System.out.println(sb.toString());
 		System.out.println("learning process over");
 	}
 	
-	public Vector learn(List<RankList> train){
+	public Vector learn(List<RankList> train) throws InterruptedException{
 		List<PartialPairList> ppll = getPartialPairForAllQueries(train);
 		List<RankList> rll = train;		
 		long startTime = 0;
@@ -298,29 +400,38 @@ public static HashMap<String, Integer> hp_V = null;
 		startTime=System.currentTimeMillis();
 		double Jfun_pre = Double.MAX_VALUE-1;
 		double Jfun_new = Double.MAX_VALUE;
+		double Jfun_pre2;
 		Vector w = new Vector();
 		w.randomize();
-		Jfun_pre = Obj_Jfun_originalLogistic(ppll, w);
+//		Jfun_pre = Obj_Jfun_originalLogistic(ppll, w);
+		Jfun_pre = Obj_Jfun_parallelOriginalLogistic(ppll, w);
 		Jfun_new = Jfun_pre;
 		int roundCount = 0;
-		int learningRateAttenuationTime = 5;
-		do{			
-			Jfun_pre = Jfun_new;
-			Vector gradient = derivate_w(ppll,w);
-			Vector tem_w = Vector.addition(w, Vector.multiply(-(this.learningRate) ,gradient));
-			Jfun_new = Obj_Jfun_originalLogistic(ppll, tem_w);
+		String dir = "output_data/originalLR/inlearning_w/"+fold_n;
+		makeDir(dir);
+		boolean isAmplifyLearningRate = false;
+		do{	
 			
+			Jfun_pre = Jfun_new;
+//			Vector gradient = derivate_w(ppll,w);
+			Vector gradient = derivate_w_parallel(ppll, w);
+			if(isAmplifyLearningRate){
+				this.learningRate *= 1.05;
+				isAmplifyLearningRate = false;
+			}
+			Vector tem_w = Vector.addition(w, Vector.multiply(-(this.learningRate) ,gradient));
+			Jfun_new = Obj_Jfun_originalLogistic(ppll, tem_w);			
 			if(Jfun_new<Jfun_pre){
 				roundCount++;				
 				w = tem_w; 
 				if(roundCount%3==0){
-					System.out.println("Jfun_new is:" + Jfun_new);
 					System.out.println("Jfun_pre is:" + Jfun_pre);
-					FileUtils.write2File("Vector_W.txt", w, "");
+					System.out.println("Jfun_new is:" + Jfun_new);	
+					isAmplifyLearningRate = true;
+					FileUtils.write2File(dir+"/w.txt", w, "");
 				}
 			}
-			else{
-				
+			else{				
 				if(learningRateAttenuationTime>0){
 					while(Jfun_new>Jfun_pre){
 						this.learningRate /=2;						
