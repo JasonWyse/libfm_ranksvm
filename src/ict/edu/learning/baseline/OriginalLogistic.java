@@ -354,24 +354,21 @@ public static HashMap<String, Integer> hp_V = null;
 		fold_n = (String) trainFile.subSequence(trainFile.indexOf("Fold"), trainFile.indexOf("Fold")+5);
 		Vector w = learn(train);					
 		String dir = "output_data/originalLR/final_w/"+fold_n;
-		makeDir(dir);
-		File file = new File(dir);
-		if  (!file .exists()  && !file .isDirectory())      
-		{       					      
-		    file .mkdir();    
-		}
+		makeDir(dir);	
+		String dir2 = "output_data/originalLR/prediction/" + fold_n;
+		makeDir(dir2);
 		String filename = dir + "/w.txt";
 		FileUtils.write2File(filename, w, fold_n);
 		List<ArrayList<Double>> dll_train = getScoreByFun(train,w);
 		List<ArrayList<Double>> dll_vali = getScoreByFun(validation,w);
-		List<ArrayList<Double>> dll_test = getScoreByFun(test,w);
-		filename = dir + "/train_prediction.txt";
+		List<ArrayList<Double>> dll_test = getScoreByFun(test,w);		
+		filename = dir2 + "/prediction_train.txt";
 		FileUtils.write2File(filename, dll_train, fold_n);
-		filename = dir + "/vali_prediction.txt";
+		filename = dir2 + "/prediction_validation.txt";
 		FileUtils.write2File(filename, dll_vali, fold_n);
-		filename = dir + "/test_prediction.txt";
+		filename = dir2 + "/prediction_test.txt";
 		FileUtils.write2File(filename, dll_test, fold_n);
-		double map1 = Measurement.MAP(dll_train, train);
+		/*double map1 = Measurement.MAP(dll_train, train);
 		double map2 = Measurement.MAP(dll_vali, validation);
 		double map3 = Measurement.MAP(dll_test, test);
 		StringBuffer sb = new StringBuffer();
@@ -387,7 +384,7 @@ public static HashMap<String, Integer> hp_V = null;
 			double ndcg_3 = Measurement.NDCG(dll_test, test,i);
 			sb.append(i+"\t"+ndcg_1+"\t"+ndcg_2+"\t"+ndcg_3).append(System.getProperty("line.separator"));			
 		}
-		System.out.println(sb.toString());
+		System.out.println(sb.toString());*/
 		System.out.println("learning process over");
 	}
 	

@@ -554,6 +554,27 @@ public class LogisticRankSVM extends Ranker{
 		
 		return J_value;
 	}
+	public double parallelFullCPU_CalculateObj_Jfun ( List<PartialPairList> ppll, Matrix V, int nThread) throws InterruptedException, Exception{
+		HashMap<String, Integer> hp = hp_V;
+		//the next two for loop to iterate every partialPair
+		double J_value = 0f;
+		for (int i = 0; i < ppll.size(); i++) {
+			
+		}
+		/*ExecutorService es = Executors.newFixedThreadPool(nThread);
+		List<Future<Double>> resultList = new ArrayList<Future<Double>>();
+		for (int i = 0; i < ppll.size(); i++) {
+			Future<Double> fu = es.submit(new ThreadCalculateObj_Jfun( ppll, i, V, hp));			
+			resultList.add(fu);
+		}
+		es.shutdown();
+		while (!es.awaitTermination(10, TimeUnit.SECONDS));
+		for (Future<Double> future : resultList) {
+			J_value += future.get().doubleValue();
+		}*/
+		
+		return J_value;
+	}
 	public Boolean isConverge(double[][] V1, double[][] V2, int rows, int cols, double epsilon){
 		double error=0f;
 		for (int i = 0; i < rows; i++) {
@@ -661,15 +682,15 @@ public class LogisticRankSVM extends Ranker{
 //		Matrix v= new Matrix();
 		SimpleDateFormat sdf = new SimpleDateFormat("yy-MM-dd-HH-mm");
 		String date = sdf.format(new Date());
-		String dir = "output_data/factorizedLR/final_matrixV/" + fold_n;
+		String dir = "output_data/factorizedLR/final_matrixV/" + fold_n ;
 		makeDir(dir);		
-		String filename = dir + "/matrixV.txt";
+		String filename = dir + "/" + "matrixV.txt";
 		FileUtils.write2File(filename, v, filename);
 		Matrix v2 = FileUtils.readFromFileGetMatrix(filename);
 		Vector w = getW(rll_train,v2);
 		dir = "output_data/factorizedLR/final_w/" + fold_n;
 		makeDir(dir);
-		filename = dir + "/w.txt";
+		filename = dir + "/" + "w.txt";
 		FileUtils.write2File(filename, w, filename);
 		List<ArrayList<Double>> dll_train = getScoreByFun(rll_train,w);
 		List<ArrayList<Double>> dll_vali = getScoreByFun(rll_validation,w);
@@ -718,11 +739,11 @@ public class LogisticRankSVM extends Ranker{
 		double Jfun_new = 0;			
 		int validCount = 0;
 		startTime=System.currentTimeMillis();   //start the time	
-		System.out.println(new Date());
+//		System.out.println(new Date());
 		Jfun_new = parallelCalculateObj_Jfun(ppll, V, nThread);
-		System.out.println(new Date());
+//		System.out.println(new Date());
 		endTime=System.currentTimeMillis();
-		System.out.println("the time of calculating Jfun_pre in minutes: "+(endTime-startTime)/1000+" s");
+		System.out.println("the time of calculating Jfun_pre in hours: "+(endTime-startTime)/1000/60/60+" h");
 		PartialPair pp = null;
 		boolean isAmplifyLearningRate = false;
 		do{
@@ -740,18 +761,21 @@ public class LogisticRankSVM extends Ranker{
 			}while(V_temp==null);	
 	        endTime=System.currentTimeMillis(); //end the time
 	        System.out.println(new Date());
-			System.out.println("the time of updating V with a random PartialPair in minutes: "+(endTime-startTime)/1000/60+" mins");
+			System.out.println("the time of updating V with a random PartialPair in seconds: "+(endTime-startTime)/1000+" s");
 			Jfun_new = parallelCalculateObj_Jfun(ppll, V_temp, nThread);
 	//		Jfun_new = -1;
-				
+			String dir = "output_data/factorizedLR/inLearning_matrixV/" + fold_n;
+			String dir2 = "output_data/factorizedLR/inLearning_w/" + fold_n;
+			makeDir(dir);	
+			makeDir(dir2);	
 			if(Jfun_new<Jfun_pre){
 				V = V_temp;
+				Vector w = getW(train,V);
 				validCount++;		
 				String description = "current learningRate is:" + learningRate + ",after " + validCount + "rounds , the V_new Matrix is:";
-				if (validCount%1==0) {
-					String dir = "output_data/factorizedLR/inLearning_matrixV/" + fold_n;
-					makeDir(dir);	
+				if (validCount%1==0) {					
 					FileUtils.write2File(dir + "/matrixV.txt", V, description);
+					FileUtils.write2File(dir2 + "/w.txt", w, "");
 					System.out.println("Jfun_pre = "+Jfun_pre);
 					System.out.println("Jfun_new = " + Jfun_new);
 					System.out.println("round " + validCount + ", the difference is " + (Jfun_pre-Jfun_new));	
@@ -766,6 +790,8 @@ public class LogisticRankSVM extends Ranker{
 						Jfun_new = parallelCalculateObj_Jfun(ppll, V_temp, nThread);
 					}			
 					V = V_temp;
+					Vector w = getW(train,V);
+					FileUtils.write2File(dir2 + "/w.txt", w, "");
 					learningRateAttenuationTime--;
 					validCount++;
 					continue;

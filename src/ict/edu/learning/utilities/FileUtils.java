@@ -18,8 +18,7 @@ public class FileUtils {
 		StringBuffer sb = new StringBuffer();
 		sb.append("# " + description + System.getProperty("line.separator"));
 		try {  
-            // 鎵撳紑涓�釜鍐欐枃浠跺櫒锛屾瀯閫犲嚱鏁颁腑鐨勭浜屼釜鍙傛暟true琛ㄧず浠ヨ拷鍔犲舰寮忓啓鏂囦欢  
-			File file=new File(filename);    
+            File file=new File(filename);    
 			if(!file.exists())    
 			{    
 			    try {    
@@ -60,7 +59,7 @@ public class FileUtils {
 			        e.printStackTrace();    
 			    }    
 			}    
-            // 鎵撳紑涓�釜鍐欐枃浠跺櫒锛屾瀯閫犲嚱鏁颁腑鐨勭浜屼釜鍙傛暟true琛ㄧず浠ヨ拷鍔犲舰寮忓啓鏂囦欢  
+           
             FileWriter writer = new FileWriter(filename, false); 
             for (int i = 0; i < m.size(); i++) {
 				for (int j = 0; j < m.get(i).size(); j++) {
@@ -80,8 +79,7 @@ public class FileUtils {
 		StringBuffer sb = new StringBuffer();
 		sb.append("# " + description + System.getProperty("line.separator"));
 		try {  
-            // 鎵撳紑涓�釜鍐欐枃浠跺櫒锛屾瀯閫犲嚱鏁颁腑鐨勭浜屼釜鍙傛暟true琛ㄧず浠ヨ拷鍔犲舰寮忓啓鏂囦欢  
-			File file=new File(filename);    
+            File file=new File(filename);    
 			if(!file.exists())    
 			{    
 			    try {    
@@ -108,8 +106,7 @@ public class FileUtils {
 		//BufferedWriter out = null;
 		
 		try {  
-            // 鎵撳紑涓�釜鍐欐枃浠跺櫒锛屾瀯閫犲嚱鏁颁腑鐨勭浜屼釜鍙傛暟true琛ㄧず浠ヨ拷鍔犲舰寮忓啓鏂囦欢  
-			File file=new File(filename);    
+            File file=new File(filename);    
 			if(!file.exists())    
 			{    
 			    try {    
@@ -160,7 +157,7 @@ public class FileUtils {
 				 matrixNum++;
 			 }			 
 		  }
-		matrixNum--;//the last one may be incomplete,so remove it from the list
+//		matrixNum--;//the last one may be incomplete,so remove it from the list
 		br.close();
 		fr.close();
 		fr = new FileReader(filename);
@@ -169,17 +166,18 @@ public class FileUtils {
 		int matrixCount = 0;
 		while ((lineContent = br.readLine()) != null) {
 			if (lineContent.contains("#")) {				
-				if(matrixCount>0){
-					ml.add(m);
+				/*if(matrixCount>0){					
 					matrixRow_index = 0;
 				}					
-				if (matrixCount == matrixNum)
-					break;
+				if (matrixCount > matrixNum)
+					break;*/
+				matrixRow_index = 0;
 				m = new Matrix();
 				continue;
 			}
 			if (lineContent.equals("")){
 				matrixCount++;
+				ml.add(m);
 				continue;
 			}
 			String[] str = lineContent.split("\t");
@@ -201,11 +199,17 @@ public class FileUtils {
 		FileReader fr = new FileReader(filename);
 		BufferedReader br= new BufferedReader(fr);		 
 		String lineContent;
+		boolean firstTime = true;
 		while((lineContent = br.readLine()) != null) {
-			 if (lineContent=="") {
+			if(lineContent.contains("#")) {
+				if(firstTime == true)
+					firstTime = false;
 				continue;
-			 }
-			 String [] str = lineContent.split("\t");
+			}
+			if (lineContent=="") {
+				continue;
+			 }			
+			String[] str = lineContent.split("\\s+");
 			 for (int i = 0; i < str.length; i++) {				
 				v.getVec()[i] = Double.parseDouble(str[i]);
 			 }			 
