@@ -51,7 +51,7 @@ public class LogisticRankSVM extends Ranker {
 	public static int nThread = 16;
 	public static double writeMatrixVInterval = 2;
 	public static double learningRate = 0.005;
-	public static double maxIterations = 1000;
+	public static double maxIterations = 500;
 	public static int learningRateAttenuationTime = 5;
 	public static int NDCG_para = 10;
 	public static HashMap<String, Integer> hp_V = null;
@@ -672,7 +672,8 @@ public class LogisticRankSVM extends Ranker {
 								ppll, q_index, V, hp, 0, nThread, remaining));
 				resultList.add(fu);
 				es.shutdown();
-				while (!es.awaitTermination(10, TimeUnit.SECONDS));
+				while (!es.awaitTermination(10, TimeUnit.SECONDS))
+					;
 			}
 		} else {
 
@@ -694,7 +695,8 @@ public class LogisticRankSVM extends Ranker {
 							remaining_pp));
 			resultList.add(fu);
 			es.shutdown();
-			while (!es.awaitTermination(10, TimeUnit.SECONDS));
+			while (!es.awaitTermination(10, TimeUnit.SECONDS))
+				;
 		}
 
 		for (Future<Double> future : resultList) {
@@ -932,11 +934,14 @@ public class LogisticRankSVM extends Ranker {
 				V = V_temp;
 				Vector w = getW(train, V);
 				validCount++;
-				String description = "current learningRate is:" + learningRate
-						+ ",after " + validCount
-						+ "rounds , the V_new Matrix is:";
 				if (validCount % 1 == 0) {
+					String description = "current learningRate is:"
+							+ learningRate + ",after " + validCount
+							+ "rounds , the V_new Matrix is:";
 					FileUtils.write2File(dir + "/matrixV.txt", V, description);
+
+					description = "current learningRate is:" + learningRate
+							+ ",after" + validCount + "rounds , the w is:";
 					FileUtils.write2File(dir2 + "/w.txt", w, "");
 					System.out.println("Jfun_pre = " + Jfun_pre);
 					System.out.println("Jfun_new = " + Jfun_new);
