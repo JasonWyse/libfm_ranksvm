@@ -2,6 +2,7 @@ package ict.edu.learning.logisticRankSVM;
 
 import ict.edu.learning.measure.Measurement;
 import ict.edu.learning.multiThread.ThreadCalculateObj_Jfun;
+import ict.edu.learning.multiThread.ThreadCalculate_PartsPartialPairsInOneQuery_Obj;
 import ict.edu.learning.multiThread.ThreadUpdateVMatrix;
 import ict.edu.learning.utilities.FileUtils;
 
@@ -32,7 +33,7 @@ import ciir.umass.edu.learning.Ranker;
 import ciir.umass.edu.learning.Vector;
 import ciir.umass.edu.metric.ERRScorer;
 
-public class LogisticRankSVM extends Ranker{
+public class LogisticRankSVM extends Ranker {
 
 	/**
 	 * @param args
@@ -55,163 +56,170 @@ public class LogisticRankSVM extends Ranker{
 	public static int NDCG_para = 10;
 	public static HashMap<String, Integer> hp_V = null;
 	static String fold_n = null;
-	public static void main(String[] args) throws InterruptedException, Exception {
+
+	public static void main(String[] args) throws InterruptedException,
+			Exception {
 		// TODO Auto-generated method stub
-		String[] rType = new String[]{"MART", "RankNet", "RankBoost", "AdaRank", "Coordinate Ascent", "LambdaRank", "LambdaMART", "ListNet", "Random Forests","Logistic RanKSVM"};
-		RANKER_TYPE[] rType2 = new RANKER_TYPE[]{RANKER_TYPE.MART, RANKER_TYPE.RANKNET, RANKER_TYPE.RANKBOOST, RANKER_TYPE.ADARANK, RANKER_TYPE.COOR_ASCENT, RANKER_TYPE.LAMBDARANK, RANKER_TYPE.LAMBDAMART, RANKER_TYPE.LISTNET, RANKER_TYPE.RANDOM_FOREST,RANKER_TYPE.LOGISTIC_RANKSVM};
-		
+		String[] rType = new String[] { "MART", "RankNet", "RankBoost",
+				"AdaRank", "Coordinate Ascent", "LambdaRank", "LambdaMART",
+				"ListNet", "Random Forests", "Logistic RanKSVM" };
+		RANKER_TYPE[] rType2 = new RANKER_TYPE[] { RANKER_TYPE.MART,
+				RANKER_TYPE.RANKNET, RANKER_TYPE.RANKBOOST,
+				RANKER_TYPE.ADARANK, RANKER_TYPE.COOR_ASCENT,
+				RANKER_TYPE.LAMBDARANK, RANKER_TYPE.LAMBDAMART,
+				RANKER_TYPE.LISTNET, RANKER_TYPE.RANDOM_FOREST,
+				RANKER_TYPE.LOGISTIC_RANKSVM };
+
 		String trainFile = "";
 		String featureDescriptionFile = "";
-		double ttSplit = 0.0;//train-test split
-		double tvSplit = 0.0;//train-validation split
+		double ttSplit = 0.0;// train-test split
+		double tvSplit = 0.0;// train-validation split
 		int foldCV = -1;
 		String validationFile = "";
 		String testFile = "";
-		int rankerType = 10;//our own logistic ranksvm
+		int rankerType = 10;// our own logistic ranksvm
 		String trainMetric = "ERR@10";
 		String testMetric = "";
-		
+
 		String savedModelFile = "";
 		String rankFile = "";
 		boolean printIndividual = false;
-		
-		//for my personal use
+
+		// for my personal use
 		String indriRankingFile = "";
-		String scoreFile = "";		
-		if(args.length < 2)
-		{
-			
+		String scoreFile = "";
+		if (args.length < 2) {
+
 			System.out.println("not enough parameter");
 			return;
 		}
-		
-		for(int i=0;i<args.length;i++)
-		{
-			if(args[i].compareTo("-train")==0)
+
+		for (int i = 0; i < args.length; i++) {
+			if (args[i].compareTo("-train") == 0)
 				trainFile = args[++i];
-			else if(args[i].compareTo("-ranker")==0)
+			else if (args[i].compareTo("-ranker") == 0)
 				rankerType = Integer.parseInt(args[++i]);
-			else if(args[i].compareTo("-feature")==0)
+			else if (args[i].compareTo("-feature") == 0)
 				featureDescriptionFile = args[++i];
-			else if(args[i].compareTo("-metric2t")==0)
+			else if (args[i].compareTo("-metric2t") == 0)
 				trainMetric = args[++i];
-			else if(args[i].compareTo("-metric2T")==0)
+			else if (args[i].compareTo("-metric2T") == 0)
 				testMetric = args[++i];
-			else if(args[i].compareTo("-nThread")==0)
+			else if (args[i].compareTo("-nThread") == 0)
 				nThread = Integer.parseInt(args[++i]);
-			else if(args[i].compareTo("-learningRate")==0)
+			else if (args[i].compareTo("-learningRate") == 0)
 				learningRate = Double.parseDouble(args[++i]);
-			else if(args[i].compareTo("-maxIterations")==0)
+			else if (args[i].compareTo("-maxIterations") == 0)
 				maxIterations = Double.parseDouble(args[++i]);
-			else if(args[i].compareTo("-writeMatrixVInterval")==0)
+			else if (args[i].compareTo("-writeMatrixVInterval") == 0)
 				writeMatrixVInterval = Double.parseDouble(args[++i]);
-			
-			else if(args[i].compareTo("-epsilon")==0)
+
+			else if (args[i].compareTo("-epsilon") == 0)
 				epsilon = Double.parseDouble(args[++i]);
-			else if(args[i].compareTo("-gmax")==0)
-				ERRScorer.MAX = Math.pow(2, Double.parseDouble(args[++i]));						
-			else if(args[i].compareTo("-tts")==0)
+			else if (args[i].compareTo("-gmax") == 0)
+				ERRScorer.MAX = Math.pow(2, Double.parseDouble(args[++i]));
+			else if (args[i].compareTo("-tts") == 0)
 				ttSplit = Double.parseDouble(args[++i]);
-			else if(args[i].compareTo("-tvs")==0)
+			else if (args[i].compareTo("-tvs") == 0)
 				tvSplit = Double.parseDouble(args[++i]);
-			else if(args[i].compareTo("-kcv")==0)
+			else if (args[i].compareTo("-kcv") == 0)
 				foldCV = Integer.parseInt(args[++i]);
-			else if(args[i].compareTo("-validate")==0)
+			else if (args[i].compareTo("-validate") == 0)
 				validationFile = args[++i];
-			else if(args[i].compareTo("-test")==0)
+			else if (args[i].compareTo("-test") == 0)
 				testFile = args[++i];
-			else if(args[i].compareTo("-norm")==0)
-			{
-				
+			else if (args[i].compareTo("-norm") == 0) {
+
 				String n = args[++i];
-				if(n.compareTo("sum") == 0)
-					{
-						nml = new SumNormalizor();
-						normalize = true;
-					}
-				else if(n.compareTo("zscore") == 0)
-					{
-						nml = new ZScoreNormalizor();
-						normalize = true;	
-					}
-				else
-				{
+				if (n.compareTo("sum") == 0) {
+					nml = new SumNormalizor();
+					normalize = true;
+				} else if (n.compareTo("zscore") == 0) {
+					nml = new ZScoreNormalizor();
+					normalize = true;
+				} else {
 					System.out.println("Unknown normalizor: " + n);
 					System.out.println("System will now exit.");
 					System.exit(1);
 				}
-			}		
-			else
-			{
-				System.out.println("Unknown command-line parameter: " + args[i]);                                                                                                       
+			} else {
+				System.out
+						.println("Unknown command-line parameter: " + args[i]);
 				System.out.println("System will now exit.");
 				System.exit(1);
 			}
 		}
-				
-		LogisticRankSVM logi_rankSvm=new LogisticRankSVM();
-		long startTime=System.currentTimeMillis();   
+
+		LogisticRankSVM logi_rankSvm = new LogisticRankSVM();
+		long startTime = System.currentTimeMillis();
 		System.out.println("program starts");
 		logi_rankSvm.evaluate(trainFile, validationFile, testFile, "");
-		long endTime=System.currentTimeMillis(); 
-		System.out.println("past time:"+(endTime-startTime)/1000+"s");
+		long endTime = System.currentTimeMillis();
+		System.out.println("past time:" + (endTime - startTime) / 1000 + "s");
 
 	}
-	
-	public List<RankList> readInput(String inputFile)	
-	{
+
+	public List<RankList> readInput(String inputFile) {
 		FeatureManager fm = new FeatureManager();
-		List<RankList> samples = fm.read3(inputFile);//read3(String fn) is defined myself for sake of my own experiment
+		List<RankList> samples = fm.read3(inputFile);// read3(String fn) is
+														// defined myself for
+														// sake of my own
+														// experiment
 		return samples;
 	}
-	public int[] readFeature(String featureDefFile)
-	{
+
+	public int[] readFeature(String featureDefFile) {
 		FeatureManager fm = new FeatureManager();
 		int[] features = fm.getFeatureIDFromFile(featureDefFile);
 		return features;
 	}
-	public void normalize(List<RankList> samples, int[] fids)
-	{
-		for(int i=0;i<samples.size();i++)
+
+	public void normalize(List<RankList> samples, int[] fids) {
+		for (int i = 0; i < samples.size(); i++)
 			nml.normalize(samples.get(i), fids);
 	}
-	public int[] getFeatureFromSampleVector(List<RankList> samples)
-	{
+
+	public int[] getFeatureFromSampleVector(List<RankList> samples) {
 		DataPoint dp = samples.get(0).get(0);
 		int fc = dp.getFeatureCount();
 		int[] features = new int[fc];
-		for(int i=0;i<fc;i++)
-			features[i] = i+1;
+		for (int i = 0; i < fc; i++)
+			features[i] = i + 1;
 		return features;
 	}
-	public List<PartialPairList> getPartialPairForAllQueries(List<RankList> rll)
-	{
-		List<PartialPairList> ppll =new ArrayList<PartialPairList>();
-		//int num=0;
+
+	public List<PartialPairList> getPartialPairForAllQueries(List<RankList> rll) {
+		List<PartialPairList> ppll = new ArrayList<PartialPairList>();
+		// int num=0;
 		for (int i = 0; i < rll.size(); i++) {
 			PartialPairList tem = getPartialPairForOneQuery(rll.get(i));
 			ppll.add(tem);
-			//num++;
+			// num++;
 		}
-		//System.out.println(num);
+		// System.out.println(num);
 		return ppll;
 	}
-	// convert labeled documents from one query into partialPair for the same query 
-	public PartialPairList getPartialPairForOneQuery(RankList rl)//rl holds all documents for one query 
+
+	// convert labeled documents from one query into partialPair for the same
+	// query
+	public PartialPairList getPartialPairForOneQuery(RankList rl)// rl holds all
+																	// documents
+																	// for one
+																	// query
 	{
 		PartialPairList ppl = new PartialPairList();
 		for (int i = 0; i < rl.size(); i++) {
-			for (int j = i+1; j < rl.size(); j++) {
-				if(rl.get(i).getLabel()!=(rl.get(j).getLabel())){
-					ppl.add(new PartialPair(rl.get(i),rl.get(j)));
+			for (int j = i + 1; j < rl.size(); j++) {
+				if (rl.get(i).getLabel() != (rl.get(j).getLabel())) {
+					ppl.add(new PartialPair(rl.get(i), rl.get(j)));
 				}
 			}
 		}
 		return ppl;
-		
+
 	}
-	public List<String> getAllPartialPairID(List<PartialPairList> ppll)
-	{
+
+	public List<String> getAllPartialPairID(List<PartialPairList> ppll) {
 		List<String> strl = new ArrayList<String>();
 		for (int i = 0; i < ppll.size(); i++) {
 			for (int j = 0; j < ppll.get(i).size(); j++) {
@@ -220,100 +228,120 @@ public class LogisticRankSVM extends Ranker{
 		}
 		return strl;
 	}
-		
-	public List<List<String>> getVRowsID(List<RankList> rll)
-	{
+
+	public List<List<String>> getVRowsID(List<RankList> rll) {
 		List<List<String>> sll = new ArrayList<List<String>>();
 		for (int i = 0; i < rll.size(); i++) {
 			List<String> sl = new ArrayList<String>();
 			for (int j = 0; j < rll.get(i).size(); j++) {
-				//put ith query's relative document id into a list
+				// put ith query's relative document id into a list
 				sl.add(rll.get(i).get(j).getDocID());
 			}
 			sll.add(sl);
 		}
 		return sll;
 	}
-	public int RowSize_V(List<RankList> rll){
+
+	public int RowSize_V(List<RankList> rll) {
 		int total = 0;
-		
-		for (int i = 0; i < rll.size(); i++) {			
+
+		for (int i = 0; i < rll.size(); i++) {
 			total += rll.get(i).size();
 		}
 		return total;
 	}
-	public HashMap<String, Integer>  getRowIDofVMatrix(List<RankList> rll){
-		
+
+	public HashMap<String, Integer> getRowIDofVMatrix(List<RankList> rll) {
+
 		HashMap<String, Integer> hp = new HashMap<String, Integer>();
 		int index = 0;
 		for (int i = 0; i < rll.size(); i++) {
-			for (int j = 0; j < rll.get(i).size(); j++) {				
-				String key=rll.get(i).get(j).getID() + "-" + rll.get(i).get(j).getDocID();
-				
+			for (int j = 0; j < rll.get(i).size(); j++) {
+				String key = rll.get(i).get(j).getID() + "-"
+						+ rll.get(i).get(j).getDocID();
+
 				hp.put(key, index);
 				index++;
 			}
 		}
 		return hp;
-		
+
 	}
-	public Matrix updateVMatrix(Matrix V_pre, List<PartialPairList> ppll, List<RankList> rll){
+
+	public Matrix updateVMatrix(Matrix V_pre, List<PartialPairList> ppll,
+			List<RankList> rll) {
 		HashMap<String, Integer> hp = getRowIDofVMatrix(rll);
-		// get the derivative of V_ac 
+		// get the derivative of V_ac
 		for (int i = 0; i < rll.size(); i++) {
 			for (int j = 0; j < rll.get(i).size(); j++) {
-				//iterate every vector V_ac
-				
+				// iterate every vector V_ac
+
 			}
 		}
 		//
 		return null;
 	}
-	public Matrix parallel_sgd_random_JFun(PartialPair pp, Matrix V_old, List<PartialPairList> ppll, List<RankList> rll, int nThread) throws InterruptedException{
+
+	public Matrix parallel_sgd_random_JFun(PartialPair pp, Matrix V_old,
+			List<PartialPairList> ppll, List<RankList> rll, int nThread)
+			throws InterruptedException {
 		HashMap<String, Integer> hp = hp_V;
-//		Matrix V_new = new Matrix(V_old); 
-		//double eta = Math.pow(10, -3);
+		// Matrix V_new = new Matrix(V_old);
+		// double eta = Math.pow(10, -3);
 		Matrix V_new = new Matrix(V_old);
-		//we use V_iq and V_jq to stand for the row id of the corresponding documents related to partialPair pp
-		int V_iq = hp.get(pp.getQueryID() + "-" + pp.getLargeDocID()).intValue();
-		int V_jq = hp.get(pp.getQueryID() + "-" + pp.getSmallDocID()).intValue();
+		// we use V_iq and V_jq to stand for the row id of the corresponding
+		// documents related to partialPair pp
+		int V_iq = hp.get(pp.getQueryID() + "-" + pp.getLargeDocID())
+				.intValue();
+		int V_jq = hp.get(pp.getQueryID() + "-" + pp.getSmallDocID())
+				.intValue();
 		double index_E = 0;
 		double factor1 = 0f;
 		for (int k = 0; k < ppll.size(); k++) {
 			for (int l = 0; l < ppll.get(k).size(); l++) {
-				//for a given partialPair X_ijq=ppll.get(i).get(j), we need to compute the 
-				double innerProduct_V = V_old.getInnerProduct(V_iq, V_jq);				
-				double innerProduct_partialPair = pp.dotProduct(ppll.get(k).get(l));
-				index_E += innerProduct_V * innerProduct_partialPair; 
+				// for a given partialPair X_ijq=ppll.get(i).get(j), we need to
+				// compute the
+				double innerProduct_V = V_old.getInnerProduct(V_iq, V_jq);
+				double innerProduct_partialPair = pp.dotProduct(ppll.get(k)
+						.get(l));
+				index_E += innerProduct_V * innerProduct_partialPair;
 			}
-		} 
-		if(index_E>20)
+		}
+		if (index_E > 20)
 			factor1 = 0;
-		else if(index_E<-20)
+		else if (index_E < -20)
 			factor1 = 1;
 		else
-			factor1 = 1/(1+Math.exp(index_E));
-		if(factor1==0){
-			System.out.println("the gradient is 0 for partialPair " + pp.getPartialPairID());
+			factor1 = 1 / (1 + Math.exp(index_E));
+		if (factor1 == 0) {
+			System.out.println("the gradient is 0 for partialPair "
+					+ pp.getPartialPairID());
 			return null;
 		}
 		// we parallelize the calculation
 		ExecutorService es = Executors.newFixedThreadPool(nThread);
 		List<Future<double[]>> resultList = new ArrayList<Future<double[]>>();
-		//next we calculate the gradients of matrix V,ie all the elements in matrix V
-		
-		for (int i = 0; i < rll.size(); i++) {//iterate all the queries
-			for (int j = 0; j < rll.get(i).size(); j++) {// iterate all the documents of query i
-				// find out the partialPairs which dataPoint=rll.get(i).get(j) involves, 
-				int V_ac = hp_V.get(rll.get(i).get(j).getID() + "-" + rll.get(i).get(j).getDocID());				
-				Future<double[]> fu = es.submit(new ThreadUpdateVMatrix(factor1, i, pp, V_ac, ppll, hp, V_old, learningRate));	
+		// next we calculate the gradients of matrix V,ie all the elements in
+		// matrix V
+
+		for (int i = 0; i < rll.size(); i++) {// iterate all the queries
+			for (int j = 0; j < rll.get(i).size(); j++) {// iterate all the
+															// documents of
+															// query i
+				// find out the partialPairs which dataPoint=rll.get(i).get(j)
+				// involves,
+				int V_ac = hp_V.get(rll.get(i).get(j).getID() + "-"
+						+ rll.get(i).get(j).getDocID());
+				Future<double[]> fu = es.submit(new ThreadUpdateVMatrix(
+						factor1, i, pp, V_ac, ppll, hp, V_old, learningRate));
 				resultList.add(fu);
-						
-			}//end of iterating documents under the same query
-		}//end of iterating queries
-		
-		es.shutdown();		 
-		while (!es.awaitTermination(10, TimeUnit.SECONDS));		
+
+			}// end of iterating documents under the same query
+		}// end of iterating queries
+
+		es.shutdown();
+		while (!es.awaitTermination(10, TimeUnit.SECONDS))
+			;
 		for (int i = 0; i < resultList.size(); i++) {
 			try {
 				V_new.setRowVector(resultList.get(i).get(), i);
@@ -322,307 +350,416 @@ public class LogisticRankSVM extends Ranker{
 				e.printStackTrace();
 			}
 		}
-		
-		/*for (int i = 0; i < rll.size(); i++) {
-			for (int j = 0; j <rll.get(i).size() ; j++) {
-				int V_ac = hp_V.get(rll.get(i).get(j).getID() + "-" + rll.get(i).get(j).getDocID());				
-				double [] factor2 = new double[Matrix.ColsOfVMatrix];					
-				for (int j2 = 0; j2 < ppll.get(i).size(); j2++) {
-					double [] temp = new double[Matrix.ColsOfVMatrix];					
-					PartialPair ite_pp = ppll.get(i).get(j2);
-					String qid_largeDoc = ite_pp.getQueryID() + "-" + ite_pp.getLargeDocID();
-					String qid_smallDoc = ite_pp.getQueryID() + "-" + ite_pp.getSmallDocID();
-					if (V_ac == hp.get(qid_largeDoc)) {
-						int docID_associatedWithV_ac = hp.get(qid_smallDoc);
-						double multiplier =pp.dotProduct(ite_pp);
-						// parameter factor2, stores the result of multiplication
-						V_old.multiplyRowVector(docID_associatedWithV_ac, multiplier, temp);
-						Matrix.RowVectorAddition(factor2, temp);				
-						
-					}
-					else if(V_ac == hp.get(qid_smallDoc)){
-						int docID_associatedWithV_ac = hp.get(qid_largeDoc);
-						double multiplier = pp.dotProduct(ite_pp);
-						V_old.multiplyRowVector(docID_associatedWithV_ac, multiplier, temp);
-						Matrix.RowVectorAddition(factor2, temp);				
-					}
-				}
-				double[] gradient = Matrix.multiplyRowVector(-factor1, factor2);
-				Matrix.RowVectorAddition(V_new.getV()[V_ac], Matrix.multiplyRowVector(-learningRate, gradient));//negative direction of the gradient
-			}
-		}*/		
+
+		/*
+		 * for (int i = 0; i < rll.size(); i++) { for (int j = 0; j
+		 * <rll.get(i).size() ; j++) { int V_ac =
+		 * hp_V.get(rll.get(i).get(j).getID() + "-" +
+		 * rll.get(i).get(j).getDocID()); double [] factor2 = new
+		 * double[Matrix.ColsOfVMatrix]; for (int j2 = 0; j2 <
+		 * ppll.get(i).size(); j2++) { double [] temp = new
+		 * double[Matrix.ColsOfVMatrix]; PartialPair ite_pp =
+		 * ppll.get(i).get(j2); String qid_largeDoc = ite_pp.getQueryID() + "-"
+		 * + ite_pp.getLargeDocID(); String qid_smallDoc = ite_pp.getQueryID() +
+		 * "-" + ite_pp.getSmallDocID(); if (V_ac == hp.get(qid_largeDoc)) { int
+		 * docID_associatedWithV_ac = hp.get(qid_smallDoc); double multiplier
+		 * =pp.dotProduct(ite_pp); // parameter factor2, stores the result of
+		 * multiplication V_old.multiplyRowVector(docID_associatedWithV_ac,
+		 * multiplier, temp); Matrix.RowVectorAddition(factor2, temp);
+		 * 
+		 * } else if(V_ac == hp.get(qid_smallDoc)){ int docID_associatedWithV_ac
+		 * = hp.get(qid_largeDoc); double multiplier = pp.dotProduct(ite_pp);
+		 * V_old.multiplyRowVector(docID_associatedWithV_ac, multiplier, temp);
+		 * Matrix.RowVectorAddition(factor2, temp); } } double[] gradient =
+		 * Matrix.multiplyRowVector(-factor1, factor2);
+		 * Matrix.RowVectorAddition(V_new.getV()[V_ac],
+		 * Matrix.multiplyRowVector(-learningRate, gradient));//negative
+		 * direction of the gradient } }
+		 */
 		return V_new;
 	}
-	public Matrix sgd_random_JFun(PartialPair pp, Matrix V_old,  List<PartialPairList> ppll, List<RankList> rll){
+
+	public Matrix sgd_random_JFun(PartialPair pp, Matrix V_old,
+			List<PartialPairList> ppll, List<RankList> rll) {
 		HashMap<String, Integer> hp = hp_V;
 		Matrix V_new = new Matrix(V_old);
 		double eta = Math.pow(10, -3);
-		//we use V_iq and V_jq to stand for the row id of the corresponding documents related to partialPair pp
-		int V_iq = hp.get(pp.getQueryID() + "-" + pp.getLargeDocID()).intValue();
-		int V_jq = hp.get(pp.getQueryID() + "-" + pp.getSmallDocID()).intValue();
+		// we use V_iq and V_jq to stand for the row id of the corresponding
+		// documents related to partialPair pp
+		int V_iq = hp.get(pp.getQueryID() + "-" + pp.getLargeDocID())
+				.intValue();
+		int V_jq = hp.get(pp.getQueryID() + "-" + pp.getSmallDocID())
+				.intValue();
 		double index_E = 0;
 		double factor1 = 0f;
 		for (int k = 0; k < ppll.size(); k++) {
 			for (int l = 0; l < ppll.get(k).size(); l++) {
-				//for a given partialPair X_ijq=ppll.get(i).get(j), we need to compute the 
-				double innerProduct_V = V_old.getInnerProduct(V_iq, V_jq);				
-				double innerProduct_partialPair = pp.dotProduct(ppll.get(k).get(l));
+				// for a given partialPair X_ijq=ppll.get(i).get(j), we need to
+				// compute the
+				double innerProduct_V = V_old.getInnerProduct(V_iq, V_jq);
+				double innerProduct_partialPair = pp.dotProduct(ppll.get(k)
+						.get(l));
 				index_E += innerProduct_V * innerProduct_partialPair;
 			}
 		}
-		if(index_E>20)
+		if (index_E > 20)
 			factor1 = 0;
-		else if(index_E<-20)
+		else if (index_E < -20)
 			factor1 = 1;
 		else
-			factor1 = 1/(1+Math.exp(index_E));
-					
-		//next we calculate the gradients of matrix V,ie all the elements in matrix V
-		for (int i = 0; i < rll.size(); i++) {//iterate all the queries
-			for (int j = 0; j < rll.get(i).size(); j++) {// iterate all the documents of query i
-				// find out the partialPairs which dataPoint=rll.get(i).get(j) involves, 
-				double [] factor2 = new double[Matrix.ColsOfVMatrix];	
-				int V_ac = hp_V.get(rll.get(i).get(j).getID() + "-" + rll.get(i).get(j).getDocID());
+			factor1 = 1 / (1 + Math.exp(index_E));
+
+		// next we calculate the gradients of matrix V,ie all the elements in
+		// matrix V
+		for (int i = 0; i < rll.size(); i++) {// iterate all the queries
+			for (int j = 0; j < rll.get(i).size(); j++) {// iterate all the
+															// documents of
+															// query i
+				// find out the partialPairs which dataPoint=rll.get(i).get(j)
+				// involves,
+				double[] factor2 = new double[Matrix.ColsOfVMatrix];
+				int V_ac = hp_V.get(rll.get(i).get(j).getID() + "-"
+						+ rll.get(i).get(j).getDocID());
 				for (int j2 = 0; j2 < ppll.get(i).size(); j2++) {
-					double [] temp = new double[Matrix.ColsOfVMatrix];
-					
+					double[] temp = new double[Matrix.ColsOfVMatrix];
+
 					PartialPair ite_pp = ppll.get(i).get(j2);
-					String qid_largeDoc = ite_pp.getQueryID() + "-" + ite_pp.getLargeDocID();
-					String qid_smallDoc = ite_pp.getQueryID() + "-" + ite_pp.getSmallDocID();
+					String qid_largeDoc = ite_pp.getQueryID() + "-"
+							+ ite_pp.getLargeDocID();
+					String qid_smallDoc = ite_pp.getQueryID() + "-"
+							+ ite_pp.getSmallDocID();
 					if (V_ac == hp.get(qid_largeDoc)) {
 						int docID_associatedWithV_ac = hp.get(qid_smallDoc);
-						double multiplier =pp.dotProduct(ite_pp);
-						// parameter factor2, stores the result of multiplication
-						V_old.multiplyRowVector(docID_associatedWithV_ac, multiplier, temp);
+						double multiplier = pp.dotProduct(ite_pp);
+						// parameter factor2, stores the result of
+						// multiplication
+						V_old.multiplyRowVector(docID_associatedWithV_ac,
+								multiplier, temp);
 						Matrix.RowVectorAddition(factor2, temp);
-						//flag = true;
-					}
-					else if(V_ac == hp.get(qid_smallDoc)){
+						// flag = true;
+					} else if (V_ac == hp.get(qid_smallDoc)) {
 						int docID_associatedWithV_ac = hp.get(qid_largeDoc);
 						double multiplier = pp.dotProduct(ite_pp);
-						V_old.multiplyRowVector(docID_associatedWithV_ac, multiplier, temp);
+						V_old.multiplyRowVector(docID_associatedWithV_ac,
+								multiplier, temp);
 						Matrix.RowVectorAddition(factor2, temp);
-						//flag = true;
+						// flag = true;
 					}
 				}
 				double[] gradient = Matrix.multiplyRowVector(-factor1, factor2);
-				Matrix.RowVectorAddition(V_new.getV()[V_ac], Matrix.multiplyRowVector(eta, gradient));
-			}//end of iterating documents under the same query
-		}//end of iterating queries
+				Matrix.RowVectorAddition(V_new.getV()[V_ac],
+						Matrix.multiplyRowVector(eta, gradient));
+			}// end of iterating documents under the same query
+		}// end of iterating queries
 		return V_new;
-		
+
 	}
-	public double[] derivative_JFun(String V_rowID, Matrix V_old,  List<PartialPairList> ppll, List<RankList> rll){
+
+	public double[] derivative_JFun(String V_rowID, Matrix V_old,
+			List<PartialPairList> ppll, List<RankList> rll) {
 		HashMap<String, Integer> hp = hp_V;
-		//the next two for loop to iterate every partialPair		
+		// the next two for loop to iterate every partialPair
 		double[] der_value = new double[Matrix.ColsOfVMatrix];
 		double[] total_der_value = new double[Matrix.ColsOfVMatrix];
-		for (int i = 0; i < ppll.size(); i++) {			
-			for (int j = 0; j < ppll.get(i).size(); j++) {				
-				//every single partialPair, we need to compute factor1 and factor2, get the result of factor1*factor2
+		for (int i = 0; i < ppll.size(); i++) {
+			for (int j = 0; j < ppll.get(i).size(); j++) {
+				// every single partialPair, we need to compute factor1 and
+				// factor2, get the result of factor1*factor2
 				double factor1 = 0f;
-				/*double factor1_numerator = 0;
-				double factor1_denominator =0;*/
+				/*
+				 * double factor1_numerator = 0; double factor1_denominator =0;
+				 */
 				double index_E = 0;
-				double [] derivative = new double[Matrix.ColsOfVMatrix];
+				double[] derivative = new double[Matrix.ColsOfVMatrix];
 				for (int kk = 0; kk < ppll.size(); kk++) {
 					for (int ll = 0; ll < ppll.get(kk).size(); ll++) {
-						//for a given partialPair X_ijq=ppll.get(i).get(j), we need to compute the  
-						
+						// for a given partialPair X_ijq=ppll.get(i).get(j), we
+						// need to compute the
+
 						String queryID = ppll.get(kk).get(ll).getQueryID();
-						String largeDocID = ppll.get(kk).get(ll).getLargeDocID();
-						String smallDocID = ppll.get(kk).get(ll).getSmallDocID();
-						int V_iq = hp.get(queryID+"-"+largeDocID).intValue();
-						int V_jq = hp.get(queryID+"-"+smallDocID).intValue();
-						double innerProduct_V = V_old.getInnerProduct(V_iq, V_jq);
-						double innerProduct_partialPair = ppll.get(i).get(j).dotProduct(ppll.get(kk).get(ll));
+						String largeDocID = ppll.get(kk).get(ll)
+								.getLargeDocID();
+						String smallDocID = ppll.get(kk).get(ll)
+								.getSmallDocID();
+						int V_iq = hp.get(queryID + "-" + largeDocID)
+								.intValue();
+						int V_jq = hp.get(queryID + "-" + smallDocID)
+								.intValue();
+						double innerProduct_V = V_old.getInnerProduct(V_iq,
+								V_jq);
+						double innerProduct_partialPair = ppll.get(i).get(j)
+								.dotProduct(ppll.get(kk).get(ll));
 						index_E += innerProduct_V * innerProduct_partialPair;
 					}
 				}
-				/*factor1_numerator = Math.exp(-index_E);
-				factor1_denominator = 1+Math.exp(-index_E);*/
-				//factor1 = Math.exp(-index_E)/(1+Math.exp(-index_E));
-				if(index_E>20)
+				/*
+				 * factor1_numerator = Math.exp(-index_E); factor1_denominator =
+				 * 1+Math.exp(-index_E);
+				 */
+				// factor1 = Math.exp(-index_E)/(1+Math.exp(-index_E));
+				if (index_E > 20)
 					factor1 = 0;
-				else if(index_E<-20)
+				else if (index_E < -20)
 					factor1 = 1;
 				else
-					factor1 = 1/(1+Math.exp(index_E));
-				double [] factor2 = new double[Matrix.ColsOfVMatrix];				
+					factor1 = 1 / (1 + Math.exp(index_E));
+				double[] factor2 = new double[Matrix.ColsOfVMatrix];
 				String s = V_rowID.substring(0, V_rowID.indexOf("-")).trim();
-				for (int k = 0; k < ppll.size(); k++) {					
-					//we only focus on the query which the derivated document vector related to
-					//ppll.get(k).size()>0 , which ensures there're at least one partialPair under a query
-					//ppll.get(k).get(0).getQueryID().equals(s), which ensures we have found the query which the
-					//derivated document belongs to
-					if(ppll.get(k).size()>0 && ppll.get(k).get(0).getQueryID().equals(s)){
-						// when we find the query derivated document belonging to, we find another document related
-						//to the derivated document under the same query						
+				for (int k = 0; k < ppll.size(); k++) {
+					// we only focus on the query which the derivated document
+					// vector related to
+					// ppll.get(k).size()>0 , which ensures there're at least
+					// one partialPair under a query
+					// ppll.get(k).get(0).getQueryID().equals(s), which ensures
+					// we have found the query which the
+					// derivated document belongs to
+					if (ppll.get(k).size() > 0
+							&& ppll.get(k).get(0).getQueryID().equals(s)) {
+						// when we find the query derivated document belonging
+						// to, we find another document related
+						// to the derivated document under the same query
 						for (int l = 0; l < ppll.get(k).size(); l++) {
-							//boolean flag = false;
-							double [] temp = new double[Matrix.ColsOfVMatrix];
+							// boolean flag = false;
+							double[] temp = new double[Matrix.ColsOfVMatrix];
 							int V_ac = hp_V.get(V_rowID);
 							PartialPair curr_pp = ppll.get(k).get(l);
-							String qid_largeDoc = curr_pp.getQueryID() + "-" + curr_pp.getLargeDocID();
-							String qid_smallDoc = curr_pp.getQueryID() + "-" + curr_pp.getSmallDocID();
+							String qid_largeDoc = curr_pp.getQueryID() + "-"
+									+ curr_pp.getLargeDocID();
+							String qid_smallDoc = curr_pp.getQueryID() + "-"
+									+ curr_pp.getSmallDocID();
 							if (V_ac == hp.get(qid_largeDoc)) {
-								int docID_associatedWithV_ac = hp.get(qid_smallDoc);
-								double multiplier = ppll.get(i).get(j).dotProduct(curr_pp);
-								// parameter factor2, stores the result of multiplication
-								V_old.multiplyRowVector(docID_associatedWithV_ac, multiplier, temp);
+								int docID_associatedWithV_ac = hp
+										.get(qid_smallDoc);
+								double multiplier = ppll.get(i).get(j)
+										.dotProduct(curr_pp);
+								// parameter factor2, stores the result of
+								// multiplication
+								V_old.multiplyRowVector(
+										docID_associatedWithV_ac, multiplier,
+										temp);
 								Matrix.RowVectorAddition(factor2, temp);
-								//flag = true;
-							}
-							else if(V_ac == hp.get(qid_smallDoc)){
-								int docID_associatedWithV_ac = hp.get(qid_largeDoc);
-								double multiplier = ppll.get(i).get(j).dotProduct(curr_pp);
-								V_old.multiplyRowVector(docID_associatedWithV_ac, multiplier, temp);
+								// flag = true;
+							} else if (V_ac == hp.get(qid_smallDoc)) {
+								int docID_associatedWithV_ac = hp
+										.get(qid_largeDoc);
+								double multiplier = ppll.get(i).get(j)
+										.dotProduct(curr_pp);
+								V_old.multiplyRowVector(
+										docID_associatedWithV_ac, multiplier,
+										temp);
 								Matrix.RowVectorAddition(factor2, temp);
-								//flag = true;
+								// flag = true;
 							}
-							/*if(flag == true){
-								
-								Matrix.SetRowVector(der_value, Matrix.multiplyRowVector(-factor1, factor2));
-								//	der_value = Matrix.multiplyRowVector(-factor1, factor2);
-								Matrix.RowVectorAddition(total_der_value, der_value);
-							}*/
-							
+							/*
+							 * if(flag == true){
+							 * 
+							 * Matrix.SetRowVector(der_value,
+							 * Matrix.multiplyRowVector(-factor1, factor2)); //
+							 * der_value = Matrix.multiplyRowVector(-factor1,
+							 * factor2);
+							 * Matrix.RowVectorAddition(total_der_value,
+							 * der_value); }
+							 */
+
 						}
 						break;
-					}	
-					
-					
+					}
+
 				}
-				Matrix.SetRowVector(der_value, Matrix.multiplyRowVector(-factor1, factor2));
-				//	der_value = Matrix.multiplyRowVector(-factor1, factor2);
+				Matrix.SetRowVector(der_value,
+						Matrix.multiplyRowVector(-factor1, factor2));
+				// der_value = Matrix.multiplyRowVector(-factor1, factor2);
 				Matrix.RowVectorAddition(total_der_value, der_value);
-				
+
 			}
 			System.out.println(i);
 		}
 		return total_der_value;
 	}
-	public double calculateObj_Jfun ( List<PartialPairList> ppll, Matrix V){
+
+	public double calculateObj_Jfun(List<PartialPairList> ppll, Matrix V) {
 		HashMap<String, Integer> hp = hp_V;
-		//the next two for loop to iterate every partialPair
+		// the next two for loop to iterate every partialPair
 		double J_value = 0f;
 		for (int i = 0; i < ppll.size(); i++) {
-			for (int j = 0; j < ppll.get(i).size(); j++) {				
-				//every single partialPair, we need to compute ln(....)
+			for (int j = 0; j < ppll.get(i).size(); j++) {
+				// every single partialPair, we need to compute ln(....)
 				double index_E = 0f;
 				for (int k = 0; k < ppll.size(); k++) {
 					for (int l = 0; l < ppll.get(k).size(); l++) {
-						//for a given partialPair X_ijq=ppll.get(i).get(j), we need to compute the  
-						/*if(ppll.get(k).size()==0)
-							continue;*/
+						// for a given partialPair X_ijq=ppll.get(i).get(j), we
+						// need to compute the
+						/*
+						 * if(ppll.get(k).size()==0) continue;
+						 */
 						String queryID = ppll.get(k).get(l).getQueryID();
 						String largeDocID = ppll.get(k).get(l).getLargeDocID();
 						String smallDocID = ppll.get(k).get(l).getSmallDocID();
-						int V_iq = hp.get(queryID+"-"+largeDocID).intValue();
-						int V_jq = hp.get(queryID+"-"+smallDocID).intValue();
+						int V_iq = hp.get(queryID + "-" + largeDocID)
+								.intValue();
+						int V_jq = hp.get(queryID + "-" + smallDocID)
+								.intValue();
 						double innerProduct_V = V.getInnerProduct(V_iq, V_jq);
-						double innerProduct_partialPair = ppll.get(i).get(j).dotProduct(ppll.get(k).get(l));
+						double innerProduct_partialPair = ppll.get(i).get(j)
+								.dotProduct(ppll.get(k).get(l));
 						index_E += innerProduct_V * innerProduct_partialPair;
 					}
 				}
-				if(index_E>10)
+				if (index_E > 10)
 					J_value += 0;
-				else if(index_E<-10)
+				else if (index_E < -10)
 					J_value += (-index_E);
-				else					
-					J_value += Math.log(1+Math.exp(-index_E));
+				else
+					J_value += Math.log(1 + Math.exp(-index_E));
 			}
 			System.out.println(i);
 		}
 		return J_value;
 	}
-	public double parallelCalculateObj_Jfun ( List<PartialPairList> ppll, Matrix V, int nThread) throws InterruptedException, Exception{
+
+	public double parallelCalculateObj_Jfun(List<PartialPairList> ppll,
+			Matrix V, int nThread) throws InterruptedException, Exception {
 		HashMap<String, Integer> hp = hp_V;
-		//the next two for loop to iterate every partialPair
+		// the next two for loop to iterate every partialPair
 		double J_value = 0f;
 		ExecutorService es = Executors.newFixedThreadPool(nThread);
 		List<Future<Double>> resultList = new ArrayList<Future<Double>>();
 		for (int i = 0; i < ppll.size(); i++) {
-			Future<Double> fu = es.submit(new ThreadCalculateObj_Jfun( ppll, i, V, hp));			
+			Future<Double> fu = es.submit(new ThreadCalculateObj_Jfun(ppll, i,
+					V, hp));
 			resultList.add(fu);
 		}
 		es.shutdown();
-		while (!es.awaitTermination(10, TimeUnit.SECONDS));
+		while (!es.awaitTermination(10, TimeUnit.SECONDS))
+			;
 		for (Future<Double> future : resultList) {
 			J_value += future.get().doubleValue();
 		}
-		
+
 		return J_value;
 	}
-	public double parallelFullCPU_CalculateObj_Jfun ( List<PartialPairList> ppll, Matrix V, int nThread) throws InterruptedException, Exception{
+
+	public double parallelFullCPU_CalculateObj_Jfun(List<PartialPairList> ppll,
+			Matrix V, int nThread) throws InterruptedException, Exception {
 		HashMap<String, Integer> hp = hp_V;
-		//the next two for loop to iterate every partialPair
+		// the next two for loop to iterate every partialPair
 		double J_value = 0f;
 		for (int i = 0; i < ppll.size(); i++) {
-			
+			double subJ_oneQuery = parallelFullCPU_CalculateSubObj_Jfun(ppll,
+					i, V, nThread);
+			J_value += subJ_oneQuery;
 		}
-		/*ExecutorService es = Executors.newFixedThreadPool(nThread);
-		List<Future<Double>> resultList = new ArrayList<Future<Double>>();
-		for (int i = 0; i < ppll.size(); i++) {
-			Future<Double> fu = es.submit(new ThreadCalculateObj_Jfun( ppll, i, V, hp));			
-			resultList.add(fu);
-		}
-		es.shutdown();
-		while (!es.awaitTermination(10, TimeUnit.SECONDS));
-		for (Future<Double> future : resultList) {
-			J_value += future.get().doubleValue();
-		}*/
-		
 		return J_value;
 	}
-	public Boolean isConverge(double[][] V1, double[][] V2, int rows, int cols, double epsilon){
-		double error=0f;
+
+	public double parallelFullCPU_CalculateSubObj_Jfun(
+			List<PartialPairList> ppll, int q_index, Matrix V, int nThread)
+			throws InterruptedException, ExecutionException {
+		HashMap<String, Integer> hp = hp_V;
+		double subJ_value = 0;
+		PartialPairList ppl = ppll.get(q_index);
+		ExecutorService es = Executors.newFixedThreadPool(nThread);
+		List<Future<Double>> resultList = new ArrayList<Future<Double>>();
+		int each_CPU_load = ppl.size() / nThread;
+		int remaining = ppl.size() % nThread;
+		if (each_CPU_load == 0) {
+			if (remaining == 0) {
+				return 0;
+			} else {
+				@SuppressWarnings("unchecked")
+				Future<Double> fu = es
+						.submit(new ThreadCalculate_PartsPartialPairsInOneQuery_Obj(
+								ppll, q_index, V, hp, 0, nThread, remaining));
+				resultList.add(fu);
+				es.shutdown();
+				while (!es.awaitTermination(10, TimeUnit.SECONDS));
+			}
+		} else {
+
+			for (int cpu_index = 0; cpu_index < nThread - 1; cpu_index++) {
+				int remaining_pp = 0;
+				@SuppressWarnings("unchecked")
+				Future<Double> fu = es
+						.submit(new ThreadCalculate_PartsPartialPairsInOneQuery_Obj(
+								ppll, q_index, V, hp, cpu_index, nThread,
+								remaining_pp));
+				resultList.add(fu);
+			}
+			int remaining_pp = ppl.size() % nThread; // add the remaining pp to
+														// the last CPU
+			@SuppressWarnings("unchecked")
+			Future<Double> fu = es
+					.submit(new ThreadCalculate_PartsPartialPairsInOneQuery_Obj(
+							ppll, q_index, V, hp, nThread - 1, nThread,
+							remaining_pp));
+			resultList.add(fu);
+			es.shutdown();
+			while (!es.awaitTermination(10, TimeUnit.SECONDS));
+		}
+
+		for (Future<Double> future : resultList) {
+			subJ_value += future.get().doubleValue();
+		}
+
+		return subJ_value;
+	}
+
+	public Boolean isConverge(double[][] V1, double[][] V2, int rows, int cols,
+			double epsilon) {
+		double error = 0f;
 		for (int i = 0; i < rows; i++) {
 			for (int j = 0; j < cols; j++) {
-				error += Math.abs(V1[i][j]-V2[i][j]);
+				error += Math.abs(V1[i][j] - V2[i][j]);
 			}
 		}
 		if (error <= epsilon) {
 			return true;
 		} else {
 			return false;
-		}		
+		}
 	}
-	public PartialPair  getPP_RandomQuery(List<PartialPairList> ppll){
+
+	public PartialPair getPP_RandomQuery(List<PartialPairList> ppll) {
 		Random rand = new Random();
-		 //
+		//
 		boolean flag = true;
 		int query_index = 0;
 		int pp_query_index = 0;
-		while(flag){
+		while (flag) {
 			query_index = rand.nextInt(ppll.size());
 			int pp_num = ppll.get(query_index).size();
-			if(pp_num!=0){
+			if (pp_num != 0) {
 				flag = false;
 				pp_query_index = rand.nextInt(pp_num);
 			}
 		}
-		return ppll.get(query_index).get(pp_query_index);		
-		
+		return ppll.get(query_index).get(pp_query_index);
+
 	}
-	public List<ArrayList<Double>> getScoreByFun(List<RankList> rll,Vector w){
+
+	public List<ArrayList<Double>> getScoreByFun(List<RankList> rll, Vector w) {
 		List<ArrayList<Double>> dll = new ArrayList<ArrayList<Double>>();
-//		List<PartialPairList> ppll = getPartialPairForAllQueries(rll);		
-	//	Vector w = getW(rll, matrixV);
+		// List<PartialPairList> ppll = getPartialPairForAllQueries(rll);
+		// Vector w = getW(rll, matrixV);
 		for (int i = 0; i < rll.size(); i++) {
 			ArrayList<Double> dl = new ArrayList<Double>();
 			for (int j = 0; j < rll.get(i).size(); j++) {
 				Vector x_ij = new Vector(rll.get(i).get(j).getFeatureVector());
-				double scoreByFun = Vector.dotProduct(w, x_ij)-w.getVec()[0]*x_ij.getVec()[0];
+				double scoreByFun = Vector.dotProduct(w, x_ij) - w.getVec()[0]
+						* x_ij.getVec()[0];
 				dl.add(scoreByFun);
 			}
 			dll.add(dl);
 		}
-		return dll;		
+		return dll;
 	}
-	public Vector getW(List<RankList> rll, Matrix matrixV){
-		List<PartialPairList> ppll = getPartialPairForAllQueries(rll);		
-		Vector w = new Vector(DataPoint.featureCount+1);//feature 0 is reserved for use,so we extend the dimension.
+
+	public Vector getW(List<RankList> rll, Matrix matrixV) {
+		List<PartialPairList> ppll = getPartialPairForAllQueries(rll);
+		Vector w = new Vector(DataPoint.featureCount + 1);// feature 0 is
+															// reserved for
+															// use,so we extend
+															// the dimension.
 		for (int i = 0; i < ppll.size(); i++) {
 			for (int j = 0; j < ppll.get(i).size(); j++) {
 				PartialPair pp = ppll.get(i).get(j);
@@ -630,184 +767,212 @@ public class LogisticRankSVM extends Ranker{
 				String largeDocID = qid + "-" + pp.getLargeDocID();
 				String smallDocID = qid + "-" + pp.getSmallDocID();
 				int v_iq = hp_V.get(largeDocID);
-				int v_jq = hp_V.get(smallDocID); 
+				int v_jq = hp_V.get(smallDocID);
 				double factor = matrixV.getInnerProduct(v_iq, v_jq);
-				double [] temp = Matrix.multiplyRowVector(factor, pp.getPartialFVals()); 
-				w = Vector.addition(w, new Vector(temp)); 
+				double[] temp = Matrix.multiplyRowVector(factor,
+						pp.getPartialFVals());
+				w = Vector.addition(w, new Vector(temp));
 			}
 		}
 		return w;
 	}
-	public String makeDir(String tail) {  
-	    String[] sub = tail.split("/");  
-	    File dir = new File(".");  
-	    for (int i = 0; i < sub.length; i++) {  
-	        if (!dir.exists()) {  
-	            dir.mkdir();  
-	        }  
-	        File dir2 = new File(dir + File.separator + sub[i]);  
-	        if (!dir2.exists()) {  
-	            dir2.mkdir();  
-	        }  
-	        dir = dir2;  
-	    }  
-	    return dir.toString();  
+
+	public String makeDir(String tail) {
+		String[] sub = tail.split("/");
+		File dir = new File(".");
+		for (int i = 0; i < sub.length; i++) {
+			if (!dir.exists()) {
+				dir.mkdir();
+			}
+			File dir2 = new File(dir + File.separator + sub[i]);
+			if (!dir2.exists()) {
+				dir2.mkdir();
+			}
+			dir = dir2;
+		}
+		return dir.toString();
 	}
-	public void evaluate(String trainFile, String validationFile, String testFile, String featureDefFile) throws InterruptedException, Exception
-	{
-		List<RankList> rll_train = readInput(trainFile);//read input
+
+	public void evaluate(String trainFile, String validationFile,
+			String testFile, String featureDefFile)
+			throws InterruptedException, Exception {
+		List<RankList> rll_train = readInput(trainFile);// read input
 		hp_V = getRowIDofVMatrix(rll_train);
 		List<RankList> rll_validation = null;
-              if(validationFile.compareTo("")!=0)
+		if (validationFile.compareTo("") != 0)
 			rll_validation = readInput(validationFile);
 		List<RankList> rll_test = null;
-		if(testFile.compareTo("")!=0)
+		if (testFile.compareTo("") != 0)
 			rll_test = readInput(testFile);
-		int[] features = readFeature(featureDefFile);//read features
-		if(features == null)//no features specified ==> use all features in the training file
-			features = getFeatureFromSampleVector(rll_train);		
-		if(normalize)
-		{
+		int[] features = readFeature(featureDefFile);// read features
+		if (features == null)// no features specified ==> use all features in
+								// the training file
+			features = getFeatureFromSampleVector(rll_train);
+		if (normalize) {
 			normalize(rll_train, features);
-			if(rll_validation != null)
+			if (rll_validation != null)
 				normalize(rll_validation, features);
-			if(rll_test != null)
+			if (rll_test != null)
 				normalize(rll_test, features);
-		}	
+		}
 		// get all partialPairs sorted by different queries
-		fold_n = (String) trainFile.subSequence(trainFile.indexOf("Fold"), trainFile.indexOf("Fold")+5);
-		
+		fold_n = (String) trainFile.subSequence(trainFile.indexOf("Fold"),
+				trainFile.indexOf("Fold") + 5);
+
 		Matrix.setRowsOfVMatrix(rll_train.size());
 		Matrix v = learn(rll_train);
-//		Matrix v= new Matrix();
+		// Matrix v= new Matrix();
 		SimpleDateFormat sdf = new SimpleDateFormat("yy-MM-dd-HH-mm");
 		String date = sdf.format(new Date());
-		String dir = "output_data/factorizedLR/final_matrixV/" + fold_n ;
-		makeDir(dir);		
+		String dir = "output_data/factorizedLR/final_matrixV/" + fold_n;
+		makeDir(dir);
 		String filename = dir + "/" + "matrixV.txt";
 		FileUtils.write2File(filename, v, filename);
 		Matrix v2 = FileUtils.readFromFileGetMatrix(filename);
-		Vector w = getW(rll_train,v2);
+		Vector w = getW(rll_train, v2);
 		dir = "output_data/factorizedLR/final_w/" + fold_n;
 		makeDir(dir);
 		filename = dir + "/" + "w.txt";
 		FileUtils.write2File(filename, w, filename);
-		List<ArrayList<Double>> dll_train = getScoreByFun(rll_train,w);
-		List<ArrayList<Double>> dll_vali = getScoreByFun(rll_validation,w);
-		List<ArrayList<Double>> dll_test = getScoreByFun(rll_test,w);
+		List<ArrayList<Double>> dll_train = getScoreByFun(rll_train, w);
+		List<ArrayList<Double>> dll_vali = getScoreByFun(rll_validation, w);
+		List<ArrayList<Double>> dll_test = getScoreByFun(rll_test, w);
 		double map1 = Measurement.MAP(dll_train, rll_train);
 		double map2 = Measurement.MAP(dll_vali, rll_validation);
 		double map3 = Measurement.MAP(dll_test, rll_test);
 		StringBuffer sb = new StringBuffer();
 		sb.append("MAP").append(System.getProperty("line.separator"));
-		sb.append("\t train"+"\t validation" +"\t test").append(System.getProperty("line.separator"));
-		sb.append("\t" + map1 + "\t" + map2 +"\t" + map3).append(System.getProperty("line.separator"));
+		sb.append("\t train" + "\t validation" + "\t test").append(
+				System.getProperty("line.separator"));
+		sb.append("\t" + map1 + "\t" + map2 + "\t" + map3).append(
+				System.getProperty("line.separator"));
 		sb.append("NDCG").append(System.getProperty("line.separator"));
-		sb.append("\t train"+"\t validation" +"\t test").append(System.getProperty("line.separator"));
-		System.out.println("map for train:vili:test:" + map1 + ":" + map2 +":" + map3);
+		sb.append("\t train" + "\t validation" + "\t test").append(
+				System.getProperty("line.separator"));
+		System.out.println("map for train:vili:test:" + map1 + ":" + map2 + ":"
+				+ map3);
 		for (int i = 1; i <= NDCG_para; i++) {
-			double ndcg_1 = Measurement.NDCG(dll_train, rll_train,i);
-			double ndcg_2 = Measurement.NDCG(dll_vali, rll_validation,i);
-			double ndcg_3 = Measurement.NDCG(dll_test, rll_test,i);
-			sb.append(i+"\t"+ndcg_1+"\t"+ndcg_2+"\t"+ndcg_3).append(System.getProperty("line.separator"));			
+			double ndcg_1 = Measurement.NDCG(dll_train, rll_train, i);
+			double ndcg_2 = Measurement.NDCG(dll_vali, rll_validation, i);
+			double ndcg_3 = Measurement.NDCG(dll_test, rll_test, i);
+			sb.append(i + "\t" + ndcg_1 + "\t" + ndcg_2 + "\t" + ndcg_3)
+					.append(System.getProperty("line.separator"));
 		}
 		System.out.println(sb.toString());
 		System.out.println("learning process over");
 	}
+
 	/**
 	 * HAVE TO BE OVER-RIDDEN IN SUB-CLASSES
 	 */
-	public void init()
-	{
-		
+	public void init() {
+
 	}
-	public Matrix learn(List<RankList> train) throws InterruptedException, Exception
-	{
+
+	public Matrix learn(List<RankList> train) throws InterruptedException,
+			Exception {
 		List<PartialPairList> ppll = getPartialPairForAllQueries(train);
-	//	System.out.println(getAllPartialPairID(ppll).size());
+		// System.out.println(getAllPartialPairID(ppll).size());
 		List<RankList> rll = train;
 		System.out.println(getAllPartialPairID(ppll).size());
-		/*List<String> rowID_V = getRowIDofVMatrix(train);*/
+		/* List<String> rowID_V = getRowIDofVMatrix(train); */
 		Matrix.RowsOfVMatrix = RowSize_V(train);
 		Matrix V_0 = new Matrix();
 		V_0.randomize();
-		Matrix V_temp = new Matrix(V_0); 
+		Matrix V_temp = new Matrix(V_0);
 		Matrix V = new Matrix(V_0);
 		double startTime = 0;
 		double endTime = 0;
 		double Jfun_pre = 0;
-		double Jfun_new = 0;			
+		double Jfun_new = 0;
 		int validCount = 0;
-		startTime=System.currentTimeMillis();   //start the time	
-//		System.out.println(new Date());
+		startTime = System.currentTimeMillis(); // start the time
+		// System.out.println(new Date());
+		double full_cpu_Jfun_new = parallelFullCPU_CalculateObj_Jfun(ppll, V,
+				nThread);
+		endTime = System.currentTimeMillis();
+		System.out.println("full_cpu_Jfun_new = " + full_cpu_Jfun_new);
+		System.out
+				.println("the time of calculating full_cpu_Jfun_new in hours: "
+						+ (endTime - startTime) / 1000 / 60 / 60 + " h");
+		startTime = System.currentTimeMillis();
 		Jfun_new = parallelCalculateObj_Jfun(ppll, V, nThread);
-//		System.out.println(new Date());
-		endTime=System.currentTimeMillis();
-		System.out.println("the time of calculating Jfun_pre in hours: "+(endTime-startTime)/1000/60/60+" h");
+		// System.out.println(new Date());
+		endTime = System.currentTimeMillis();
+		System.out.println("the time of calculating Jfun_pre in hours: "
+				+ (endTime - startTime) / 1000 / 60 / 60 + " h");
 		PartialPair pp = null;
 		boolean isAmplifyLearningRate = false;
-		do{
-		
+		do {
+
 			Jfun_pre = Jfun_new;
-			startTime=System.currentTimeMillis();   //start the time	
-			if(isAmplifyLearningRate){
+			startTime = System.currentTimeMillis(); // start the time
+			if (isAmplifyLearningRate) {
 				this.learningRate *= 1.05;
 				isAmplifyLearningRate = false;
 			}
 			System.out.println(new Date());
-			do{
+			do {
 				pp = getPP_RandomQuery(ppll);
-				V_temp = parallel_sgd_random_JFun( pp,  V, ppll,  rll, nThread);				
-			}while(V_temp==null);	
-	        endTime=System.currentTimeMillis(); //end the time
-	        System.out.println(new Date());
-			System.out.println("the time of updating V with a random PartialPair in seconds: "+(endTime-startTime)/1000+" s");
+				V_temp = parallel_sgd_random_JFun(pp, V, ppll, rll, nThread);
+			} while (V_temp == null);
+			endTime = System.currentTimeMillis(); // end the time
+			System.out.println(new Date());
+			System.out
+					.println("the time of updating V with a random PartialPair in seconds: "
+							+ (endTime - startTime) / 1000 + " s");
 			Jfun_new = parallelCalculateObj_Jfun(ppll, V_temp, nThread);
-	//		Jfun_new = -1;
-			String dir = "output_data/factorizedLR/inLearning_matrixV/" + fold_n;
+			// Jfun_new = -1;
+			String dir = "output_data/factorizedLR/inLearning_matrixV/"
+					+ fold_n;
 			String dir2 = "output_data/factorizedLR/inLearning_w/" + fold_n;
-			makeDir(dir);	
-			makeDir(dir2);	
-			if(Jfun_new<Jfun_pre){
+			makeDir(dir);
+			makeDir(dir2);
+			if (Jfun_new < Jfun_pre) {
 				V = V_temp;
-				Vector w = getW(train,V);
-				validCount++;		
-				String description = "current learningRate is:" + learningRate + ",after " + validCount + "rounds , the V_new Matrix is:";
-				if (validCount%1==0) {					
+				Vector w = getW(train, V);
+				validCount++;
+				String description = "current learningRate is:" + learningRate
+						+ ",after " + validCount
+						+ "rounds , the V_new Matrix is:";
+				if (validCount % 1 == 0) {
 					FileUtils.write2File(dir + "/matrixV.txt", V, description);
 					FileUtils.write2File(dir2 + "/w.txt", w, "");
-					System.out.println("Jfun_pre = "+Jfun_pre);
+					System.out.println("Jfun_pre = " + Jfun_pre);
 					System.out.println("Jfun_new = " + Jfun_new);
-					System.out.println("round " + validCount + ", the difference is " + (Jfun_pre-Jfun_new));	
+					System.out.println("round " + validCount
+							+ ", the difference is " + (Jfun_pre - Jfun_new));
 					isAmplifyLearningRate = true;
-				}		
-			}
-			else{
-				if(learningRateAttenuationTime>0){
-					while(Jfun_new>Jfun_pre){
-						LogisticRankSVM.learningRate /=2;
-						V_temp = parallel_sgd_random_JFun( pp,  V, ppll,  rll, nThread);						
-						Jfun_new = parallelCalculateObj_Jfun(ppll, V_temp, nThread);
-					}			
+				}
+			} else {
+				if (learningRateAttenuationTime > 0) {
+					while (Jfun_new > Jfun_pre) {
+						LogisticRankSVM.learningRate /= 2;
+						V_temp = parallel_sgd_random_JFun(pp, V, ppll, rll,
+								nThread);
+						Jfun_new = parallelCalculateObj_Jfun(ppll, V_temp,
+								nThread);
+					}
 					V = V_temp;
-					Vector w = getW(train,V);
+					Vector w = getW(train, V);
 					FileUtils.write2File(dir2 + "/w.txt", w, "");
 					learningRateAttenuationTime--;
 					validCount++;
 					continue;
 				}
-				
-				System.out.println("Jfun_pre = "+Jfun_pre);
+
+				System.out.println("Jfun_pre = " + Jfun_pre);
 				System.out.println("Jfun_new = " + Jfun_new);
-				System.out.println("Jfun_new has been larger than Jfun_pre, exit now");
-				System.out.println("round " + validCount + ", the difference is " + Math.abs(Jfun_new-Jfun_pre));
+				System.out
+						.println("Jfun_new has been larger than Jfun_pre, exit now");
+				System.out.println("round " + validCount
+						+ ", the difference is "
+						+ Math.abs(Jfun_new - Jfun_pre));
 				break;
 			}
-	        
-		}while(Jfun_pre-Jfun_new>epsilon && validCount < maxIterations);
+
+		} while (Jfun_pre - Jfun_new > epsilon && validCount < maxIterations);
 		return V;
-    }
-	
-	
+	}
 
 }
