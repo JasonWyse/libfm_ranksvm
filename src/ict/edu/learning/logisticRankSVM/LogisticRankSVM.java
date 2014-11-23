@@ -54,6 +54,7 @@ public class LogisticRankSVM extends Ranker {
 	public static double maxIterations = 500;
 	public static int learningRateAttenuationTime = 5;
 	public static int NDCG_para = 10;
+	public static String allFile_prefix;
 	public static HashMap<String, Integer> hp_V = null;
 	static String fold_n = null;
 
@@ -122,6 +123,8 @@ public class LogisticRankSVM extends Ranker {
 				ttSplit = Double.parseDouble(args[++i]);
 			else if (args[i].compareTo("-tvs") == 0)
 				tvSplit = Double.parseDouble(args[++i]);
+			else if (args[i].compareTo("-allFile_prefix") == 0)
+				allFile_prefix = (args[++i] + "-");
 			else if (args[i].compareTo("-kcv") == 0)
 				foldCV = Integer.parseInt(args[++i]);
 			else if (args[i].compareTo("-validate") == 0)
@@ -340,7 +343,7 @@ public class LogisticRankSVM extends Ranker {
 		}// end of iterating queries
 
 		es.shutdown();
-		while (!es.awaitTermination(10, TimeUnit.SECONDS))
+		while (!es.awaitTermination(1, TimeUnit.SECONDS))
 			;
 		for (int i = 0; i < resultList.size(); i++) {
 			try {
@@ -648,9 +651,8 @@ public class LogisticRankSVM extends Ranker {
 			double subJ_oneQuery = parallelFullCPU_CalculateSubObj_Jfun(ppll,
 					i, V, nThread);
 			System.out.println("query " + i +"is over, its value is " + subJ_oneQuery);
-			J_value += subJ_oneQuery;
-			
-		}
+			J_value += subJ_oneQuery;			
+		}		
 		return J_value;
 	}
 
@@ -832,13 +834,13 @@ public class LogisticRankSVM extends Ranker {
 		String date = sdf.format(new Date());
 		String dir = "output_data/factorizedLR/final_matrixV/" + fold_n;
 		makeDir(dir);
-		String filename = dir + "/" + "matrixV.txt";
+		String filename = dir + "/" + allFile_prefix + "matrixV.txt";
 		FileUtils.write2File(filename, v, filename);
 		Matrix v2 = FileUtils.readFromFileGetMatrix(filename);
 		Vector w = getW(rll_train, v2);
 		dir = "output_data/factorizedLR/final_w/" + fold_n;
 		makeDir(dir);
-		filename = dir + "/" + "w.txt";
+		filename = dir + "/" + allFile_prefix + "w.txt";
 		FileUtils.write2File(filename, w, filename);
 		List<ArrayList<Double>> dll_train = getScoreByFun(rll_train, w);
 		List<ArrayList<Double>> dll_vali = getScoreByFun(rll_validation, w);
@@ -942,11 +944,14 @@ public class LogisticRankSVM extends Ranker {
 					String description = "current learningRate is:"
 							+ learningRate + ",after " + validCount
 							+ "rounds , the V_new Matrix is:";
-					FileUtils.write2File(dir + "/matrixV.txt", V, description);
+					String fileName = null;
+					fileName = dir + "/" + allFile_prefix + "matrixV.txt";
+					FileUtils.write2File(fileName, V, description);
 
 					description = "current learningRate is:" + learningRate
 							+ ",after" + validCount + "rounds , the w is:";
-					FileUtils.write2File(dir2 + "/w.txt", w, "");
+					fileName = dir2 + "/" + allFile_prefix + "w.txt";
+					FileUtils.write2File(fileName, w, "");
 					System.out.println("Jfun_pre = " + Jfun_pre);
 					System.out.println("Jfun_new = " + Jfun_new);
 					System.out.println("round " + validCount
@@ -964,7 +969,8 @@ public class LogisticRankSVM extends Ranker {
 					}
 					V = V_temp;
 					Vector w = getW(train, V);
-					FileUtils.write2File(dir2 + "/w.txt", w, "");
+					String fileName = dir2 + "/" + allFile_prefix + "w.txt";
+					FileUtils.write2File(fileName, w, "");
 					learningRateAttenuationTime--;
 					validCount++;
 					continue;
