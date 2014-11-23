@@ -630,7 +630,7 @@ public class LogisticRankSVM extends Ranker {
 			resultList.add(fu);
 		}
 		es.shutdown();
-		while (!es.awaitTermination(10, TimeUnit.SECONDS))
+		while (!es.awaitTermination(1, TimeUnit.SECONDS))
 			;
 		for (Future<Double> future : resultList) {
 			J_value += future.get().doubleValue();
@@ -647,7 +647,9 @@ public class LogisticRankSVM extends Ranker {
 		for (int i = 0; i < ppll.size(); i++) {
 			double subJ_oneQuery = parallelFullCPU_CalculateSubObj_Jfun(ppll,
 					i, V, nThread);
+			System.out.println("query " + i +"is over, its value is " + subJ_oneQuery);
 			J_value += subJ_oneQuery;
+			
 		}
 		return J_value;
 	}
@@ -669,10 +671,12 @@ public class LogisticRankSVM extends Ranker {
 				@SuppressWarnings("unchecked")
 				Future<Double> fu = es
 						.submit(new ThreadCalculate_PartsPartialPairsInOneQuery_Obj(
-								ppll, q_index, V, hp, 0, nThread, remaining));
+								ppll, q_index, V, hp, -1, each_CPU_load, remaining));
+				//-1 is a special case for each_CPU_load==0, and remaining>0, which means
+				//the partialPair quantity under this q_index is very small
 				resultList.add(fu);
 				es.shutdown();
-				while (!es.awaitTermination(10, TimeUnit.SECONDS))
+				while (!es.awaitTermination(1, TimeUnit.SECONDS))
 					;
 			}
 		} else {
@@ -682,7 +686,7 @@ public class LogisticRankSVM extends Ranker {
 				@SuppressWarnings("unchecked")
 				Future<Double> fu = es
 						.submit(new ThreadCalculate_PartsPartialPairsInOneQuery_Obj(
-								ppll, q_index, V, hp, cpu_index, nThread,
+								ppll, q_index, V, hp, cpu_index, each_CPU_load,
 								remaining_pp));
 				resultList.add(fu);
 			}
@@ -691,11 +695,11 @@ public class LogisticRankSVM extends Ranker {
 			@SuppressWarnings("unchecked")
 			Future<Double> fu = es
 					.submit(new ThreadCalculate_PartsPartialPairsInOneQuery_Obj(
-							ppll, q_index, V, hp, nThread - 1, nThread,
+							ppll, q_index, V, hp, nThread - 1, each_CPU_load,
 							remaining_pp));
 			resultList.add(fu);
 			es.shutdown();
-			while (!es.awaitTermination(10, TimeUnit.SECONDS))
+			while (!es.awaitTermination(1, TimeUnit.SECONDS))
 				;
 		}
 
@@ -876,7 +880,7 @@ public class LogisticRankSVM extends Ranker {
 		List<PartialPairList> ppll = getPartialPairForAllQueries(train);
 		// System.out.println(getAllPartialPairID(ppll).size());
 		List<RankList> rll = train;
-		System.out.println(getAllPartialPairID(ppll).size());
+		System.out.println("total partialPair of all query:" + getAllPartialPairID(ppll).size());
 		/* List<String> rowID_V = getRowIDofVMatrix(train); */
 		Matrix.RowsOfVMatrix = RowSize_V(train);
 		Matrix V_0 = new Matrix();

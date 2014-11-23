@@ -15,12 +15,12 @@ public class ThreadCalculate_PartsPartialPairsInOneQuery_Obj implements
 	Matrix V;
 	int q_index;
 	int cpu_index;
-	int nThread;
+//	int nThread;
 	int remaining_pp;
-
+	int each_CPU_load;
 	public ThreadCalculate_PartsPartialPairsInOneQuery_Obj(
 			List<PartialPairList> ppll, int q_index, Matrix V,
-			HashMap<String, Integer> hp, int cpu_index, int nThread,
+			HashMap<String, Integer> hp, int cpu_index, int each_CPU_load,
 			int remaining_pp) {
 		// this.rll = rll;
 		this.hp = hp;
@@ -28,14 +28,19 @@ public class ThreadCalculate_PartsPartialPairsInOneQuery_Obj implements
 		this.V = V;
 		this.q_index = q_index;
 		this.cpu_index = cpu_index;
-		this.nThread = nThread;
+//		this.nThread = nThread;
+		this.each_CPU_load = each_CPU_load;
 		this.remaining_pp = remaining_pp;
 	}
 
 	public double execute() {
 		double J_value = 0;
-		int start_position = cpu_index * nThread;
-		int numberOfPartialPair = (cpu_index + 1) * nThread + remaining_pp;
+		int start_position = cpu_index * each_CPU_load;
+		int numberOfPartialPair =  each_CPU_load + remaining_pp;
+		if (cpu_index<0) {
+			start_position = 0;
+			numberOfPartialPair = remaining_pp;
+		}
 		for (int i = start_position; i < (start_position + numberOfPartialPair); i++) {
 			double index_E = 0f;// we can calculate index_E parallelly , need to
 								// accomplish

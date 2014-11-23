@@ -47,7 +47,7 @@ public class ThreadCalculateObj_Jfun implements Callable {
 			else					
 				J_value += Math.log(1+Math.exp(-index_E));
 		}
-		System.out.println("query "+q_index +" is over");
+		System.out.println("query "+q_index +" is over. its value is " + J_value);
 		return J_value;
 		
 	}
