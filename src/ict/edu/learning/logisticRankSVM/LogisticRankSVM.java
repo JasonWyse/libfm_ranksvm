@@ -1,12 +1,14 @@
 package ict.edu.learning.logisticRankSVM;
 
-import ict.edu.learning.measure.Measurement;
 import ict.edu.learning.multiThread.ThreadCalculateObj_Jfun;
 import ict.edu.learning.multiThread.ThreadCalculate_PartsPartialPairsInOneQuery_Obj;
 import ict.edu.learning.multiThread.ThreadUpdateVMatrix;
 import ict.edu.learning.utilities.FileUtils;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -650,9 +652,10 @@ public class LogisticRankSVM extends Ranker {
 		for (int i = 0; i < ppll.size(); i++) {
 			double subJ_oneQuery = parallelFullCPU_CalculateSubObj_Jfun(ppll,
 					i, V, nThread);
-			System.out.println("query " + i +"is over, its value is " + subJ_oneQuery);
-			J_value += subJ_oneQuery;			
-		}		
+			System.out.println("query " + i + "is over, its value is "
+					+ subJ_oneQuery);
+			J_value += subJ_oneQuery;
+		}
 		return J_value;
 	}
 
@@ -673,9 +676,11 @@ public class LogisticRankSVM extends Ranker {
 				@SuppressWarnings("unchecked")
 				Future<Double> fu = es
 						.submit(new ThreadCalculate_PartsPartialPairsInOneQuery_Obj(
-								ppll, q_index, V, hp, -1, each_CPU_load, remaining));
-				//-1 is a special case for each_CPU_load==0, and remaining>0, which means
-				//the partialPair quantity under this q_index is very small
+								ppll, q_index, V, hp, -1, each_CPU_load,
+								remaining));
+				// -1 is a special case for each_CPU_load==0, and remaining>0,
+				// which means
+				// the partialPair quantity under this q_index is very small
 				resultList.add(fu);
 				es.shutdown();
 				while (!es.awaitTermination(1, TimeUnit.SECONDS))
@@ -779,6 +784,7 @@ public class LogisticRankSVM extends Ranker {
 				double factor = matrixV.getInnerProduct(v_iq, v_jq);
 				double[] temp = Matrix.multiplyRowVector(factor,
 						pp.getPartialFVals());
+				temp[0] = 0;// position 0 is undefined for
 				w = Vector.addition(w, new Vector(temp));
 			}
 		}
@@ -836,38 +842,54 @@ public class LogisticRankSVM extends Ranker {
 		makeDir(dir);
 		String filename = dir + "/" + allFile_prefix + "matrixV.txt";
 		FileUtils.write2File(filename, v, filename);
-		Matrix v2 = FileUtils.readFromFileGetMatrix(filename);
-		Vector w = getW(rll_train, v2);
+//		Matrix v2 = FileUtils.readFromFileGetLatestMatrix(filename);
+		Vector w = getW(rll_train, v);
 		dir = "output_data/factorizedLR/final_w/" + fold_n;
 		makeDir(dir);
 		filename = dir + "/" + allFile_prefix + "w.txt";
 		FileUtils.write2File(filename, w, filename);
-		List<ArrayList<Double>> dll_train = getScoreByFun(rll_train, w);
-		List<ArrayList<Double>> dll_vali = getScoreByFun(rll_validation, w);
-		List<ArrayList<Double>> dll_test = getScoreByFun(rll_test, w);
-		double map1 = Measurement.MAP(dll_train, rll_train);
-		double map2 = Measurement.MAP(dll_vali, rll_validation);
-		double map3 = Measurement.MAP(dll_test, rll_test);
-		StringBuffer sb = new StringBuffer();
-		sb.append("MAP").append(System.getProperty("line.separator"));
-		sb.append("\t train" + "\t validation" + "\t test").append(
-				System.getProperty("line.separator"));
-		sb.append("\t" + map1 + "\t" + map2 + "\t" + map3).append(
-				System.getProperty("line.separator"));
-		sb.append("NDCG").append(System.getProperty("line.separator"));
-		sb.append("\t train" + "\t validation" + "\t test").append(
-				System.getProperty("line.separator"));
-		System.out.println("map for train:vili:test:" + map1 + ":" + map2 + ":"
-				+ map3);
-		for (int i = 1; i <= NDCG_para; i++) {
-			double ndcg_1 = Measurement.NDCG(dll_train, rll_train, i);
-			double ndcg_2 = Measurement.NDCG(dll_vali, rll_validation, i);
-			double ndcg_3 = Measurement.NDCG(dll_test, rll_test, i);
-			sb.append(i + "\t" + ndcg_1 + "\t" + ndcg_2 + "\t" + ndcg_3)
-					.append(System.getProperty("line.separator"));
-		}
-		System.out.println(sb.toString());
-		System.out.println("learning process over");
+		
+		// -------------we calculate the prediction score of each data set-------------
+		String prediction_dir = "output_data/factorizedLR/prediction/" + fold_n;
+		makeDir(prediction_dir);
+		String prediction_filename = null;
+		// get the prediction score of train set
+		prediction_filename = prediction_dir + "/" + allFile_prefix
+				+ "prediction_train.txt";
+		List<ArrayList<Double>> dll_train1 = getScoreByFun(rll_train, w);
+		FileUtils.write2File(prediction_filename, dll_train1, "");
+		// get the prediction score of validation set
+		prediction_filename = prediction_dir + "/" + allFile_prefix
+				+ "prediction_validation.txt";
+		List<ArrayList<Double>> dll_vali1 = getScoreByFun(rll_validation, w);
+		FileUtils.write2File(prediction_filename, dll_vali1, "");
+		// get the prediction score of test set
+		List<ArrayList<Double>> dll_test1 = getScoreByFun(rll_test, w);
+		prediction_filename = prediction_dir + "/" + allFile_prefix
+				+ "prediction_test.txt";
+		FileUtils.write2File(prediction_filename, dll_test1, "");
+		// -----------------------------------------------------------------------------
+		
+		String perlResult_dir = "perlEvaluate/factorizedLR/" + fold_n;
+		makeDir(perlResult_dir);
+		String perlResult_filename = perlResult_dir	+ "/" + allFile_prefix + "test.txt";
+		String[] perl_cmd = {
+				"perl",
+				"perlEvaluate/eval-score-mslr.pl",
+				"data/OHSUMED/OHSUMED/QueryLevelNorm/" + fold_n + "/test.txt",
+				"output_data/factorizedLR/prediction/" + fold_n + "/" + allFile_prefix
+						+ "prediction_test.txt", 
+				perlResult_filename, 
+				"0" };
+		Process proc =null;
+		try{
+		proc = Runtime.getRuntime().exec(perl_cmd);		
+		}catch(Exception e){
+			System.out.println("error executing perl_cmd");
+			int exitValue = proc.exitValue();
+			System.out.println("exitValue: " + exitValue);
+		}		
+		System.out.println("evaluate process over");
 	}
 
 	/**
@@ -882,7 +904,8 @@ public class LogisticRankSVM extends Ranker {
 		List<PartialPairList> ppll = getPartialPairForAllQueries(train);
 		// System.out.println(getAllPartialPairID(ppll).size());
 		List<RankList> rll = train;
-		System.out.println("total partialPair of all query:" + getAllPartialPairID(ppll).size());
+		System.out.println("total partialPair of all query:"
+				+ getAllPartialPairID(ppll).size());
 		/* List<String> rowID_V = getRowIDofVMatrix(train); */
 		Matrix.RowsOfVMatrix = RowSize_V(train);
 		Matrix V_0 = new Matrix();
@@ -896,15 +919,17 @@ public class LogisticRankSVM extends Ranker {
 		int validCount = 0;
 		startTime = System.currentTimeMillis(); // start the time
 		// System.out.println(new Date());
-		double full_cpu_Jfun_new = parallelFullCPU_CalculateObj_Jfun(ppll, V,
-				nThread);
-		endTime = System.currentTimeMillis();
-		System.out.println("full_cpu_Jfun_new = " + full_cpu_Jfun_new);
-		System.out
-				.println("the time of calculating full_cpu_Jfun_new in hours: "
-						+ (endTime - startTime) / 1000 / 60 / 60 + " h");
+		/*
+		 * double full_cpu_Jfun_new = parallelFullCPU_CalculateObj_Jfun(ppll, V,
+		 * nThread); endTime = System.currentTimeMillis();
+		 * System.out.println("full_cpu_Jfun_new = " + full_cpu_Jfun_new);
+		 * System.out
+		 * .println("the time of calculating full_cpu_Jfun_new in hours: " +
+		 * (endTime - startTime) / 1000 / 60 / 60 + " h");
+		 */
 		startTime = System.currentTimeMillis();
-		Jfun_new = parallelCalculateObj_Jfun(ppll, V, nThread);
+		// Jfun_new = parallelCalculateObj_Jfun(ppll, V, nThread);
+		// Jfun_new = parallelFullCPU_CalculateObj_Jfun(ppll, V,nThread);
 		// System.out.println(new Date());
 		endTime = System.currentTimeMillis();
 		System.out.println("the time of calculating Jfun_pre in hours: "
@@ -929,8 +954,9 @@ public class LogisticRankSVM extends Ranker {
 			System.out
 					.println("the time of updating V with a random PartialPair in seconds: "
 							+ (endTime - startTime) / 1000 + " s");
-			Jfun_new = parallelCalculateObj_Jfun(ppll, V_temp, nThread);
-			// Jfun_new = -1;
+			// Jfun_new = parallelCalculateObj_Jfun(ppll, V_temp, nThread);
+			// Jfun_new = parallelFullCPU_CalculateObj_Jfun(ppll, V,nThread);
+			Jfun_new = -1;
 			String dir = "output_data/factorizedLR/inLearning_matrixV/"
 					+ fold_n;
 			String dir2 = "output_data/factorizedLR/inLearning_w/" + fold_n;
@@ -964,15 +990,34 @@ public class LogisticRankSVM extends Ranker {
 						LogisticRankSVM.learningRate /= 2;
 						V_temp = parallel_sgd_random_JFun(pp, V, ppll, rll,
 								nThread);
-						Jfun_new = parallelCalculateObj_Jfun(ppll, V_temp,
+						// Jfun_new = parallelCalculateObj_Jfun(ppll,
+						// V_temp,nThread);
+						Jfun_new = parallelFullCPU_CalculateObj_Jfun(ppll, V,
 								nThread);
 					}
+					validCount++;
+					learningRateAttenuationTime--;
 					V = V_temp;
 					Vector w = getW(train, V);
-					String fileName = dir2 + "/" + allFile_prefix + "w.txt";
-					FileUtils.write2File(fileName, w, "");
-					learningRateAttenuationTime--;
-					validCount++;
+					if (validCount % 1 == 0) {
+						String description = "current learningRate is: "
+								+ learningRate + ",after " + validCount
+								+ "rounds , the V_new Matrix is:";
+						String fileName = null;
+						fileName = dir + "/" + allFile_prefix + "matrixV.txt";
+						FileUtils.write2File(fileName, V, description);
+
+						description = "current learningRate is:" + learningRate
+								+ ",after" + validCount + "rounds , the w is:";
+						fileName = dir2 + "/" + allFile_prefix + "w.txt";
+						FileUtils.write2File(fileName, w, "");
+						System.out.println("Jfun_pre = " + Jfun_pre);
+						System.out.println("Jfun_new = " + Jfun_new);
+						System.out.println("round " + validCount
+								+ ", the difference is "
+								+ (Jfun_pre - Jfun_new));
+						isAmplifyLearningRate = true;
+					}
 					continue;
 				}
 

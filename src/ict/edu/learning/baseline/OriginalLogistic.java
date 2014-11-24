@@ -7,6 +7,7 @@ import ict.edu.learning.multiThread.ThreadUpdateVMatrix;
 import ict.edu.learning.utilities.FileUtils;
 
 import java.io.File;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -44,6 +45,7 @@ public static double epsilon = 0.00000000001f;
 public static int nThread = 5;
 public static int maxIterations=1000;
 public static int learningRateAttenuationTime = 5;
+public static String allFile_prefix;
 String fold_n = null;
 public static HashMap<String, Integer> hp_V = null;
 	public OriginalLogistic() {
@@ -110,6 +112,8 @@ public static HashMap<String, Integer> hp_V = null;
 				validationFile = args[++i];
 			else if(args[i].compareTo("-test")==0)
 				testFile = args[++i];
+			else if(args[i].compareTo("-allFile_prefix")==0)
+				allFile_prefix = args[++i]+"-";
 			else if(args[i].compareTo("-norm")==0)
 			{
 				
@@ -292,8 +296,7 @@ public static HashMap<String, Integer> hp_V = null;
 		Vector gradient = new Vector();
 		ExecutorService es = Executors.newFixedThreadPool(nThread);
 		List<Future<Vector>> resultList = new ArrayList<Future<Vector>>();
-		for (int i = 0; i < ppll.size(); i++) {
-			
+		for (int i = 0; i < ppll.size(); i++) {			
 			Future<Vector> fu = es.submit(new ThreadCalculateLR_Gradient(ppll, i , w));	
 			resultList.add(fu);			
 		}
@@ -362,30 +365,36 @@ public static HashMap<String, Integer> hp_V = null;
 		List<ArrayList<Double>> dll_train = getScoreByFun(train,w);
 		List<ArrayList<Double>> dll_vali = getScoreByFun(validation,w);
 		List<ArrayList<Double>> dll_test = getScoreByFun(test,w);		
-		filename = dir2 + "/prediction_train.txt";
+		filename = dir2 + "/" + allFile_prefix + "prediction_train.txt";
 		FileUtils.write2File(filename, dll_train, fold_n);
-		filename = dir2 + "/prediction_validation.txt";
+		filename = dir2 + "/" + allFile_prefix + "prediction_validation.txt";
 		FileUtils.write2File(filename, dll_vali, fold_n);
-		filename = dir2 + "/prediction_test.txt";
+		filename = dir2 + "/" + allFile_prefix + "prediction_test.txt";
 		FileUtils.write2File(filename, dll_test, fold_n);
-		/*double map1 = Measurement.MAP(dll_train, train);
-		double map2 = Measurement.MAP(dll_vali, validation);
-		double map3 = Measurement.MAP(dll_test, test);
-		StringBuffer sb = new StringBuffer();
-		sb.append("MAP").append(System.getProperty("line.separator"));
-		sb.append("\t train"+"\t validation" +"\t test").append(System.getProperty("line.separator"));
-		sb.append("\t" + map1 + "\t" + map2 +"\t" + map3).append(System.getProperty("line.separator"));
-		sb.append("NDCG").append(System.getProperty("line.separator"));
-		sb.append("\t train"+"\t validation" +"\t test").append(System.getProperty("line.separator"));
-		System.out.println("map for train:vili:test:" + map1 + ":" + map2 +":" + map3);
-		for (int i = 1; i <= 10; i++) {
-			double ndcg_1 = Measurement.NDCG(dll_train, train,i);
-			double ndcg_2 = Measurement.NDCG(dll_vali, validation,i);
-			double ndcg_3 = Measurement.NDCG(dll_test, test,i);
-			sb.append(i+"\t"+ndcg_1+"\t"+ndcg_2+"\t"+ndcg_3).append(System.getProperty("line.separator"));			
+		//----------------------------------------------------------
+		String perlResult_dir = "perlEvaluate/originalLR/" + fold_n;
+		makeDir(perlResult_dir);
+		SimpleDateFormat sdf = new SimpleDateFormat("yy-MM-dd-HH-mm-ss");
+		String timeStamp = sdf.format(new Date())+"-";
+		String perlResult_filename = perlResult_dir	+ "/" + allFile_prefix + timeStamp+ "test.txt";
+		String[] perl_cmd = {
+				"perl",
+				"perlEvaluate/eval-score-mslr.pl",
+				"data/OHSUMED/OHSUMED/QueryLevelNorm/" + fold_n + "/test.txt",
+				"output_data/originalLR/prediction/" + fold_n + "/" + allFile_prefix
+						+ "prediction_test.txt", 
+				perlResult_filename, 
+				"0" };
+		Process proc =null;
+		try{
+		proc = Runtime.getRuntime().exec(perl_cmd);		
+		}catch(Exception e){
+			System.out.println("error executing perl_cmd");
+			int exitValue = proc.exitValue();
+			System.out.println("exitValue: " + exitValue);
 		}
-		System.out.println(sb.toString());*/
-		System.out.println("learning process over");
+		
+		System.out.println("evaluate process over");
 	}
 	
 	public Vector learn(List<RankList> train) throws InterruptedException{
@@ -438,6 +447,12 @@ public static HashMap<String, Integer> hp_V = null;
 					learningRateAttenuationTime--;
 					w = tem_w;
 					roundCount++;
+					if(roundCount%3==0){
+						System.out.println("Jfun_pre is:" + Jfun_pre);
+						System.out.println("Jfun_new is:" + Jfun_new);	
+						isAmplifyLearningRate = true;
+						FileUtils.write2File(dir+"/w.txt", w, "");
+					}
 					continue;
 				}
 				

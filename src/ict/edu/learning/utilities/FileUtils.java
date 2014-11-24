@@ -124,7 +124,8 @@ public class FileUtils {
         }  
 		return true;
 	}
-	public static Matrix readFromFileGetMatrix(String filename) throws IOException{
+	public static Matrix readFromFileGetLatestMatrix(String filename) throws IOException{
+		//get the latest Matirx
 		Matrix  m = new Matrix();
 		FileReader fr = new FileReader(filename);
 		BufferedReader br= new BufferedReader(fr);		 
@@ -135,7 +136,8 @@ public class FileUtils {
 				continue;
 			 }
 			 if(lineContent.equals("")){
-				 break;
+				 //break;
+				 continue;
 			 }
 			 String [] str = lineContent.split("\t");
 			 for (int i = 0; i < str.length; i++) {				
