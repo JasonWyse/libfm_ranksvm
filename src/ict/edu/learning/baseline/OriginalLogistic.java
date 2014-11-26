@@ -413,6 +413,8 @@ public static HashMap<String, Integer> hp_V = null;
 		Jfun_pre = Obj_Jfun_parallelOriginalLogistic(ppll, w);
 		Jfun_new = Jfun_pre;
 		int roundCount = 0;
+		SimpleDateFormat sdf = new SimpleDateFormat("yy-MM-dd-HH-mm");
+		String date_timeStamp = sdf.format(new Date()) + "-";
 		String dir = "output_data/originalLR/inlearning_w/"+fold_n;
 		makeDir(dir);
 		boolean isAmplifyLearningRate = false;
@@ -434,7 +436,7 @@ public static HashMap<String, Integer> hp_V = null;
 					System.out.println("Jfun_pre is:" + Jfun_pre);
 					System.out.println("Jfun_new is:" + Jfun_new);	
 					isAmplifyLearningRate = true;
-					FileUtils.write2File(dir+"/w.txt", w, "");
+					FileUtils.write2File(dir+ date_timeStamp +"/w.txt", w, "");
 				}
 			}
 			else{				

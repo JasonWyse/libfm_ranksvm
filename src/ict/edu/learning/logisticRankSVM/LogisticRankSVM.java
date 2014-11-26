@@ -1,14 +1,12 @@
 package ict.edu.learning.logisticRankSVM;
 
+import ict.edu.learning.metric.ResultClass;
 import ict.edu.learning.multiThread.ThreadCalculateObj_Jfun;
 import ict.edu.learning.multiThread.ThreadCalculate_PartsPartialPairsInOneQuery_Obj;
 import ict.edu.learning.multiThread.ThreadUpdateVMatrix;
 import ict.edu.learning.utilities.FileUtils;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -59,6 +57,7 @@ public class LogisticRankSVM extends Ranker {
 	public static String allFile_prefix;
 	public static HashMap<String, Integer> hp_V = null;
 	static String fold_n = null;
+	public static double output_interval = 3;
 
 	public static void main(String[] args) throws InterruptedException,
 			Exception {
@@ -116,7 +115,9 @@ public class LogisticRankSVM extends Ranker {
 				maxIterations = Double.parseDouble(args[++i]);
 			else if (args[i].compareTo("-writeMatrixVInterval") == 0)
 				writeMatrixVInterval = Double.parseDouble(args[++i]);
-
+			else if (args[i].compareTo("-output_interval") == 0)
+				output_interval = Double.parseDouble(args[++i]);
+			
 			else if (args[i].compareTo("-epsilon") == 0)
 				epsilon = Double.parseDouble(args[++i]);
 			else if (args[i].compareTo("-gmax") == 0)
@@ -806,7 +807,54 @@ public class LogisticRankSVM extends Ranker {
 		}
 		return dir.toString();
 	}
-
+	public void calculatePredictionScore(List<RankList> rll_train,
+			List<RankList> rll_validation,List<RankList> rll_test,Vector w,String timeStamp,String valid_round){
+		if (!valid_round.equals("")) {
+			valid_round = "-" + valid_round;
+		}
+		String prediction_dir = "output_data/factorizedLR/prediction/" + fold_n;
+		makeDir(prediction_dir);
+		String prediction_filename = null;
+		// get the prediction score of train set
+		prediction_filename = prediction_dir + "/" + allFile_prefix + timeStamp 
+				+ "prediction_train" + valid_round + ".txt";
+		List<ArrayList<Double>> dll_train1 = getScoreByFun(rll_train, w);
+		FileUtils.write2File(prediction_filename, dll_train1, "");
+		// get the prediction score of validation set
+		prediction_filename = prediction_dir + "/" + allFile_prefix + timeStamp
+				+ "prediction_validation" + valid_round + ".txt";
+		List<ArrayList<Double>> dll_vali1 = getScoreByFun(rll_validation, w);
+		FileUtils.write2File(prediction_filename, dll_vali1, "");
+		// get the prediction score of test set
+		List<ArrayList<Double>> dll_test1 = getScoreByFun(rll_test, w);
+		prediction_filename = prediction_dir + "/" + allFile_prefix + timeStamp
+				+ "prediction_test" + valid_round + ".txt";
+		FileUtils.write2File(prediction_filename, dll_test1, "");
+	}
+	public void invokePerlScript(String date_timeStamp,String valid_round){
+		String perlResult_dir = "perlEvaluate/factorizedLR/" + fold_n ;
+		makeDir(perlResult_dir);
+		if(!valid_round.equals(null))
+			valid_round = "-" + valid_round;
+		String perlResult_filename = perlResult_dir	+ "/" + allFile_prefix + 
+				date_timeStamp + "test" + valid_round + ".txt";
+		String[] perl_cmd = {
+				"perl",
+				"perlEvaluate/eval-score-mslr.pl",
+				"data/OHSUMED/OHSUMED/QueryLevelNorm/" + fold_n + "/test.txt",
+				"output_data/factorizedLR/prediction/" + fold_n + "/" + allFile_prefix
+						+ date_timeStamp + "prediction_test" + valid_round+ ".txt", 
+				perlResult_filename, 
+				"0" };
+		Process proc =null;
+		try{
+		proc = Runtime.getRuntime().exec(perl_cmd);		
+		}catch(Exception e){
+			System.out.println("error executing perl_cmd");
+			int exitValue = proc.exitValue();
+			System.out.println("exitValue: " + exitValue);
+		}		
+	}
 	public void evaluate(String trainFile, String validationFile,
 			String testFile, String featureDefFile)
 			throws InterruptedException, Exception {
@@ -833,52 +881,55 @@ public class LogisticRankSVM extends Ranker {
 		fold_n = (String) trainFile.subSequence(trainFile.indexOf("Fold"),
 				trainFile.indexOf("Fold") + 5);
 
-		Matrix.setRowsOfVMatrix(rll_train.size());
-		Matrix v = learn(rll_train);
-		// Matrix v= new Matrix();
-		SimpleDateFormat sdf = new SimpleDateFormat("yy-MM-dd-HH-mm");
-		String date = sdf.format(new Date());
-		String dir = "output_data/factorizedLR/final_matrixV/" + fold_n;
-		makeDir(dir);
-		String filename = dir + "/" + allFile_prefix + "matrixV.txt";
-		FileUtils.write2File(filename, v, filename);
+		Matrix.setRowsOfVMatrix(rll_train.size());		
+		ResultClass rc = learn(rll_train, rll_validation , rll_test);//each learn process has its own timeStamp,
+											//in order to distinguish each learn process from each other
+		Matrix v = rc.getMatrix();
+		String date_timeStamp = rc.getTimeStamp()+ "-"; 
+//		Matrix v = learn(rll_train);
+		// Matrix v= new Matrix();		
+		String dir_final_matrix = "output_data/factorizedLR/final_matrixV/" + fold_n;
+		makeDir(dir_final_matrix);
+		String filename = dir_final_matrix + "/" + allFile_prefix + date_timeStamp + "matrixV.txt";
+		FileUtils.write2File(filename, v, date_timeStamp);
 //		Matrix v2 = FileUtils.readFromFileGetLatestMatrix(filename);
 		Vector w = getW(rll_train, v);
-		dir = "output_data/factorizedLR/final_w/" + fold_n;
-		makeDir(dir);
-		filename = dir + "/" + allFile_prefix + "w.txt";
-		FileUtils.write2File(filename, w, filename);
+		String dir_final_w = "output_data/factorizedLR/final_w/" + fold_n;
+		makeDir(dir_final_w);
+		filename = dir_final_w + "/" + allFile_prefix + date_timeStamp + "w.txt";
+		FileUtils.write2File(filename, w, date_timeStamp);
 		
 		// -------------we calculate the prediction score of each data set-------------
-		String prediction_dir = "output_data/factorizedLR/prediction/" + fold_n;
+		/*String prediction_dir = "output_data/factorizedLR/prediction/" + fold_n;
 		makeDir(prediction_dir);
 		String prediction_filename = null;
 		// get the prediction score of train set
-		prediction_filename = prediction_dir + "/" + allFile_prefix
+		prediction_filename = prediction_dir + "/" + allFile_prefix + date_timeStamp
 				+ "prediction_train.txt";
 		List<ArrayList<Double>> dll_train1 = getScoreByFun(rll_train, w);
 		FileUtils.write2File(prediction_filename, dll_train1, "");
 		// get the prediction score of validation set
-		prediction_filename = prediction_dir + "/" + allFile_prefix
+		prediction_filename = prediction_dir + "/" + allFile_prefix + date_timeStamp
 				+ "prediction_validation.txt";
 		List<ArrayList<Double>> dll_vali1 = getScoreByFun(rll_validation, w);
 		FileUtils.write2File(prediction_filename, dll_vali1, "");
 		// get the prediction score of test set
 		List<ArrayList<Double>> dll_test1 = getScoreByFun(rll_test, w);
-		prediction_filename = prediction_dir + "/" + allFile_prefix
+		prediction_filename = prediction_dir + "/" + allFile_prefix + date_timeStamp
 				+ "prediction_test.txt";
-		FileUtils.write2File(prediction_filename, dll_test1, "");
+		FileUtils.write2File(prediction_filename, dll_test1, "");*/
 		// -----------------------------------------------------------------------------
-		
-		String perlResult_dir = "perlEvaluate/factorizedLR/" + fold_n;
+		calculatePredictionScore(rll_train, rll_validation, rll_test, w, date_timeStamp,"");
+		//--------------- invoke perl script -------------------------------------------		
+		/*String perlResult_dir = "perlEvaluate/factorizedLR/" + fold_n ;
 		makeDir(perlResult_dir);
-		String perlResult_filename = perlResult_dir	+ "/" + allFile_prefix + "test.txt";
+		String perlResult_filename = perlResult_dir	+ "/" + allFile_prefix + date_timeStamp + "test.txt";
 		String[] perl_cmd = {
 				"perl",
 				"perlEvaluate/eval-score-mslr.pl",
 				"data/OHSUMED/OHSUMED/QueryLevelNorm/" + fold_n + "/test.txt",
 				"output_data/factorizedLR/prediction/" + fold_n + "/" + allFile_prefix
-						+ "prediction_test.txt", 
+						+ date_timeStamp + "prediction_test.txt", 
 				perlResult_filename, 
 				"0" };
 		Process proc =null;
@@ -888,7 +939,9 @@ public class LogisticRankSVM extends Ranker {
 			System.out.println("error executing perl_cmd");
 			int exitValue = proc.exitValue();
 			System.out.println("exitValue: " + exitValue);
-		}		
+		}		*/
+		//------------------------------------------------------------------------------
+		invokePerlScript(date_timeStamp,"");
 		System.out.println("evaluate process over");
 	}
 
@@ -899,15 +952,15 @@ public class LogisticRankSVM extends Ranker {
 
 	}
 
-	public Matrix learn(List<RankList> train) throws InterruptedException,
+	public ResultClass learn(List<RankList> rll_train,List<RankList> rll_validation ,List<RankList> rll_test) throws InterruptedException,
 			Exception {
-		List<PartialPairList> ppll = getPartialPairForAllQueries(train);
+		List<PartialPairList> ppll = getPartialPairForAllQueries(rll_train);
 		// System.out.println(getAllPartialPairID(ppll).size());
-		List<RankList> rll = train;
+		List<RankList> rll = rll_train;
 		System.out.println("total partialPair of all query:"
 				+ getAllPartialPairID(ppll).size());
 		/* List<String> rowID_V = getRowIDofVMatrix(train); */
-		Matrix.RowsOfVMatrix = RowSize_V(train);
+		Matrix.RowsOfVMatrix = RowSize_V(rll_train);
 		Matrix V_0 = new Matrix();
 		V_0.randomize();
 		Matrix V_temp = new Matrix(V_0);
@@ -917,6 +970,8 @@ public class LogisticRankSVM extends Ranker {
 		double Jfun_pre = 0;
 		double Jfun_new = 0;
 		int validCount = 0;
+		SimpleDateFormat sdf = new SimpleDateFormat("yy-MM-dd-HH-mm");
+		String date_timeStamp = sdf.format(new Date()) + "-";//this timeStamp distinguish this learn process from other learning process
 		startTime = System.currentTimeMillis(); // start the time
 		// System.out.println(new Date());
 		/*
@@ -929,10 +984,10 @@ public class LogisticRankSVM extends Ranker {
 		 */
 		startTime = System.currentTimeMillis();
 		// Jfun_new = parallelCalculateObj_Jfun(ppll, V, nThread);
-		// Jfun_new = parallelFullCPU_CalculateObj_Jfun(ppll, V,nThread);
+		   Jfun_new = parallelFullCPU_CalculateObj_Jfun(ppll, V,nThread);
 		// System.out.println(new Date());
 		endTime = System.currentTimeMillis();
-		System.out.println("the time of calculating Jfun_pre in hours: "
+		System.out.println("the time of calculating Jfun_new in hours: "
 				+ (endTime - startTime) / 1000 / 60 / 60 + " h");
 		PartialPair pp = null;
 		boolean isAmplifyLearningRate = false;
@@ -955,34 +1010,53 @@ public class LogisticRankSVM extends Ranker {
 					.println("the time of updating V with a random PartialPair in seconds: "
 							+ (endTime - startTime) / 1000 + " s");
 			// Jfun_new = parallelCalculateObj_Jfun(ppll, V_temp, nThread);
-			// Jfun_new = parallelFullCPU_CalculateObj_Jfun(ppll, V,nThread);
-			Jfun_new = -1;
-			String dir = "output_data/factorizedLR/inLearning_matrixV/"
+		    Jfun_new = parallelFullCPU_CalculateObj_Jfun(ppll, V_temp,nThread);
+	//		Jfun_new = -1;
+			String dir_inLearning_matrixV = "output_data/factorizedLR/inLearning_matrixV/"
 					+ fold_n;
-			String dir2 = "output_data/factorizedLR/inLearning_w/" + fold_n;
-			makeDir(dir);
-			makeDir(dir2);
+			String dir_inLearning_w = "output_data/factorizedLR/inLearning_w/" + fold_n;
+			String dir_final_w = "output_data/factorizedLR/final_w/" + fold_n;
+			String dir_final_matrixV = "output_data/factorizedLR/final_matrixV/"
+					+ fold_n;
+			makeDir(dir_inLearning_matrixV);
+			makeDir(dir_inLearning_w);
+			makeDir(dir_final_w);
+			makeDir(dir_final_matrixV);
 			if (Jfun_new < Jfun_pre) {
 				V = V_temp;
-				Vector w = getW(train, V);
+				Vector w = getW(rll_train, V);
 				validCount++;
 				if (validCount % 1 == 0) {
 					String description = "current learningRate is:"
 							+ learningRate + ",after " + validCount
 							+ "rounds , the V_new Matrix is:";
 					String fileName = null;
-					fileName = dir + "/" + allFile_prefix + "matrixV.txt";
+					
+					fileName = dir_inLearning_matrixV + "/" + allFile_prefix + date_timeStamp + "matrixV.txt";
 					FileUtils.write2File(fileName, V, description);
 
 					description = "current learningRate is:" + learningRate
 							+ ",after" + validCount + "rounds , the w is:";
-					fileName = dir2 + "/" + allFile_prefix + "w.txt";
+					fileName = dir_inLearning_w + "/" + allFile_prefix + date_timeStamp + "w.txt";
 					FileUtils.write2File(fileName, w, "");
 					System.out.println("Jfun_pre = " + Jfun_pre);
 					System.out.println("Jfun_new = " + Jfun_new);
 					System.out.println("round " + validCount
 							+ ", the difference is " + (Jfun_pre - Jfun_new));
 					isAmplifyLearningRate = true;
+					if(validCount%output_interval==0){
+						String validCount_str = String.valueOf(validCount);
+						makeDir(dir_final_w);
+						fileName = dir_final_w + "/" + allFile_prefix + date_timeStamp + "final_w-" + validCount_str + ".txt";
+						makeDir(dir_final_matrixV);
+						FileUtils.write2File(fileName, w, fileName);
+						fileName = dir_final_matrixV + "/" + allFile_prefix + date_timeStamp + "final_matrixV-" + validCount_str + ".txt";
+						FileUtils.write2File(fileName, w, fileName);
+						calculatePredictionScore(rll_train, rll_validation, rll_test, w, date_timeStamp, validCount_str);
+						invokePerlScript(date_timeStamp, validCount_str);
+						
+					}
+					
 				}
 			} else {
 				if (learningRateAttenuationTime > 0) {
@@ -998,18 +1072,18 @@ public class LogisticRankSVM extends Ranker {
 					validCount++;
 					learningRateAttenuationTime--;
 					V = V_temp;
-					Vector w = getW(train, V);
+					Vector w = getW(rll_train, V);
 					if (validCount % 1 == 0) {
 						String description = "current learningRate is: "
 								+ learningRate + ",after " + validCount
 								+ "rounds , the V_new Matrix is:";
 						String fileName = null;
-						fileName = dir + "/" + allFile_prefix + "matrixV.txt";
+						fileName = dir_inLearning_matrixV + "/" + allFile_prefix + date_timeStamp + "matrixV.txt";
 						FileUtils.write2File(fileName, V, description);
 
 						description = "current learningRate is:" + learningRate
 								+ ",after" + validCount + "rounds , the w is:";
-						fileName = dir2 + "/" + allFile_prefix + "w.txt";
+						fileName = dir_inLearning_w + "/" + allFile_prefix + "w.txt";
 						FileUtils.write2File(fileName, w, "");
 						System.out.println("Jfun_pre = " + Jfun_pre);
 						System.out.println("Jfun_new = " + Jfun_new);
@@ -1017,6 +1091,18 @@ public class LogisticRankSVM extends Ranker {
 								+ ", the difference is "
 								+ (Jfun_pre - Jfun_new));
 						isAmplifyLearningRate = true;
+						if(validCount%output_interval==0){
+							String validCount_str = String.valueOf(validCount);
+							makeDir(dir_final_w);
+							fileName = dir_final_w + "/" + allFile_prefix + date_timeStamp + "final_w-" + validCount_str + ".txt";
+							makeDir(dir_final_matrixV);
+							FileUtils.write2File(fileName, w, fileName);
+							fileName = dir_final_matrixV + "/" + allFile_prefix + date_timeStamp + "final_matrixV" + validCount_str + ".txt";
+							FileUtils.write2File(fileName, w, fileName);
+							calculatePredictionScore(rll_train, rll_validation, rll_test, w, date_timeStamp, validCount_str);
+							invokePerlScript(date_timeStamp, validCount_str);
+							
+						}
 					}
 					continue;
 				}
@@ -1032,7 +1118,9 @@ public class LogisticRankSVM extends Ranker {
 			}
 
 		} while (Jfun_pre - Jfun_new > epsilon && validCount < maxIterations);
-		return V;
+		ResultClass rc = new ResultClass(V, date_timeStamp);
+	//	return V;
+		return rc;
 	}
 
 }
