@@ -54,7 +54,7 @@ public class LogisticRankSVM extends Ranker {
 	public static double maxIterations = 500;
 	public static int learningRateAttenuationTime = 5;
 	public static int NDCG_para = 10;
-	public static String allFile_prefix;
+	public static String allFile_prefix ="";
 	public static HashMap<String, Integer> hp_V = null;
 	static String fold_n = null;
 	public static double output_interval = 3;
