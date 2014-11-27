@@ -1066,7 +1066,7 @@ public class LogisticRankSVM extends Ranker {
 								nThread);
 						// Jfun_new = parallelCalculateObj_Jfun(ppll,
 						// V_temp,nThread);
-						Jfun_new = parallelFullCPU_CalculateObj_Jfun(ppll, V,
+						Jfun_new = parallelFullCPU_CalculateObj_Jfun(ppll, V_temp,
 								nThread);
 					}
 					validCount++;
