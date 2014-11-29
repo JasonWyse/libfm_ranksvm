@@ -841,7 +841,7 @@ public class LogisticRankSVM extends Ranker {
 		String[] perl_cmd = {
 				"perl",
 				"perlEvaluate/eval-score-mslr.pl",
-				"data/OHSUMED/OHSUMED/QueryLevelNorm/" + fold_n + "/test.txt",
+				"../data/OHSUMED/OHSUMED/QueryLevelNorm/" + fold_n + "/test.txt",
 				"output_data/factorizedLR/prediction/" + fold_n + "/" + allFile_prefix
 						+ date_timeStamp + "prediction_test" + valid_round+ ".txt", 
 				perlResult_filename, 
