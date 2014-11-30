@@ -3,5 +3,6 @@
 bin/
 .myeclipse
 .settings
-perlEvaluate/
+/perlEvaluate
 output_data/
+src/run.sh
