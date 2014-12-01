@@ -836,6 +836,8 @@ public class LogisticRankSVM extends Ranker {
 		makeDir(perlResult_dir);
 		if(!valid_round.equals(null))
 			valid_round = "-" + valid_round;
+		if(allFile_prefix.equals("-"))
+			allFile_prefix = "";
 		String perlResult_filename = perlResult_dir	+ "/" + allFile_prefix + 
 				date_timeStamp + "test" + valid_round + ".txt";
 		String[] perl_cmd = {
