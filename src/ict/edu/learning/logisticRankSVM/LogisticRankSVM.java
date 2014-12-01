@@ -812,6 +812,8 @@ public class LogisticRankSVM extends Ranker {
 		if (!valid_round.equals("")) {
 			valid_round = "-" + valid_round;
 		}
+		if(allFile_prefix.equals("-"))
+			allFile_prefix = "";
 		String prediction_dir = "output_data/factorizedLR/prediction/" + fold_n;
 		makeDir(prediction_dir);
 		String prediction_filename = null;
