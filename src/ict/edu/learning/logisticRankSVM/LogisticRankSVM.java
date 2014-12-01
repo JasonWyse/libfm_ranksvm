@@ -127,7 +127,7 @@ public class LogisticRankSVM extends Ranker {
 			else if (args[i].compareTo("-tvs") == 0)
 				tvSplit = Double.parseDouble(args[++i]);
 			else if (args[i].compareTo("-allFile_prefix") == 0)
-				allFile_prefix = (args[++i] + "-");
+				allFile_prefix = (args[++i]+"-");
 			else if (args[i].compareTo("-kcv") == 0)
 				foldCV = Integer.parseInt(args[++i]);
 			else if (args[i].compareTo("-validate") == 0)
@@ -154,8 +154,7 @@ public class LogisticRankSVM extends Ranker {
 				System.out.println("System will now exit.");
 				System.exit(1);
 			}
-		}
-
+		}		
 		LogisticRankSVM logi_rankSvm = new LogisticRankSVM();
 		long startTime = System.currentTimeMillis();
 		System.out.println("program starts");
@@ -1000,7 +999,7 @@ public class LogisticRankSVM extends Ranker {
 			Jfun_pre = Jfun_new;
 			startTime = System.currentTimeMillis(); // start the time
 			if (isAmplifyLearningRate) {
-				this.learningRate *= 1.05;
+				LogisticRankSVM.learningRate *= 1.05;
 				isAmplifyLearningRate = false;
 			}
 			System.out.println(new Date());
